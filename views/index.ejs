@@ -1,0 +1,84 @@
+<%- include('partials/header') %>
+
+<!-- Hero carousel -->
+<section aria-roledescription="carousel" aria-label="Featured collections" data-carousel class="relative overflow-hidden">
+  <% const themes = { lilac: 'bg-gradient-to-br from-lilac-soft via-white to-lilac-soft text-lilac-deep', gold: 'bg-gradient-to-br from-gold-soft via-white to-gold-soft text-gold-dark', ink: 'bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 text-white' }; %>
+  <% slides.forEach((s, i) => { %>
+  <div data-slide class="<%= i === 0 ? '' : 'hidden' %> <%= themes[s.theme] %>">
+    <div class="container-x grid md:grid-cols-2 items-center gap-8 py-12 md:py-20 min-h-[460px]">
+      <div>
+        <h1 class="text-5xl md:text-7xl font-semibold leading-[1.03]"><%= s.title %></h1>
+        <p class="mt-5 text-lg max-w-md opacity-90"><%= s.text %></p>
+        <a href="<%= s.href %>" class="<%= s.theme === 'ink' ? 'bg-white text-ink hover:bg-gold-soft' : 'bg-ink text-white hover:bg-gold-dark' %> btn mt-8 px-8 py-4 text-base"><%= s.cta %></a>
+      </div>
+      <% if (s.image) { %><div class="justify-self-center w-full max-w-sm md:max-w-md"><img src="<%= s.image %>" alt="" class="w-full aspect-square object-cover rounded-[2rem] shadow-2xl" <%= i === 0 ? '' : 'loading=lazy' %>></div><% } %>
+    </div>
+  </div>
+  <% }) %>
+  <button type="button" data-prev class="absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 border border-neutral-300 w-10 h-12 flex items-center justify-center hover:bg-white" aria-label="Previous slide"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg></button>
+  <button type="button" data-next class="absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 border border-neutral-300 w-10 h-12 flex items-center justify-center hover:bg-white" aria-label="Next slide"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></button>
+</section>
+
+<!-- Trust strip -->
+<section class="border-b border-neutral-200">
+  <div class="container-x grid grid-cols-2 md:grid-cols-4 gap-4 py-6 text-sm">
+    <p><strong class="block">BPA free</strong><span class="text-neutral-600">Food-grade materials</span></p>
+    <p><strong class="block">Free shipping</strong><span class="text-neutral-600">On every order</span></p>
+    <p><strong class="block">3 ways to pay</strong><span class="text-neutral-600">Online, COD or partial COD</span></p>
+    <p><strong class="block">Save min 50%</strong><span class="text-neutral-600">Against listed MRP</span></p>
+  </div>
+</section>
+
+<!-- One product from each category -->
+<section class="container-x pt-16">
+  <div class="flex items-end justify-between gap-4 mb-8">
+    <h2 class="text-3xl md:text-4xl font-semibold">Shop by category</h2>
+    <a href="/products" class="text-sm font-semibold underline underline-offset-4 hover:text-gold-dark">View all products</a>
+  </div>
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
+    <% featured.forEach((p) => { %>
+      <div>
+        <%- include('partials/product-card', { p }) %>
+        <a href="/collections/<%= p.category %>" class="mt-2 inline-block text-xs text-gold-dark font-semibold hover:underline">More <%= p.categoryName.toLowerCase() %> products</a>
+      </div>
+    <% }) %>
+  </div>
+</section>
+
+<% if (newArrivals.length) { %>
+<section class="container-x pt-20">
+  <div class="flex items-end justify-between gap-4 mb-8">
+    <h2 class="text-3xl md:text-4xl font-semibold">Just landed</h2>
+    <a href="/new-arrivals" class="text-sm font-semibold underline underline-offset-4 hover:text-gold-dark">See new arrivals</a>
+  </div>
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-10">
+    <% newArrivals.forEach((p) => { %><%- include('partials/product-card', { p }) %><% }) %>
+  </div>
+</section>
+<% } %>
+
+<!-- Customer reviews with photos -->
+<section class="mt-24 bg-paper py-16" aria-labelledby="reviews-h">
+  <div class="container-x">
+    <h2 id="reviews-h" class="text-3xl md:text-4xl font-semibold">What customers say</h2>
+    <p class="mt-2 text-neutral-600">Real kitchens, lunch bags and shop counters.</p>
+    <div class="mt-10 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <% reviews.forEach((r) => { %>
+      <figure class="bg-white rounded-2xl overflow-hidden border border-neutral-200 flex flex-col">
+        <a href="/products/<%= r.product %>" class="block aspect-[4/3] bg-neutral-100">
+          <img src="<%= r.photo || (r.productObj && r.productObj.image) || '/images/placeholder.svg' %>" alt="Photo from <%= r.name %> with <%= r.productObj ? r.productObj.name : 'their order' %>" loading="lazy" class="w-full h-full object-cover">
+        </a>
+        <figcaption class="p-5 flex-1 flex flex-col">
+          <%- include('partials/stars', { n: r.rating }) %>
+          <p class="font-display text-lg mt-2"><%= r.title %></p>
+          <blockquote class="mt-2 text-sm text-neutral-700 leading-relaxed flex-1"><%= r.text %></blockquote>
+          <p class="mt-4 text-sm"><span class="font-semibold"><%= r.name %></span> <span class="text-neutral-500">from <%= r.city %></span></p>
+          <% if (r.productObj) { %><a class="text-xs text-gold-dark font-semibold mt-1 hover:underline" href="/products/<%= r.product %>">Bought: <%= r.productObj.name %></a><% } %>
+        </figcaption>
+      </figure>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

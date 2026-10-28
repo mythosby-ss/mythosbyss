@@ -1,0 +1,40 @@
+<%- include('partials/header') %>
+<section class="bg-paper border-b border-neutral-200">
+  <div class="container-x py-10">
+    <h1 class="text-4xl md:text-5xl font-semibold"><%= heading %></h1>
+    <p class="mt-2 text-neutral-600 max-w-xl"><%= blurb %></p>
+  </div>
+</section>
+<div class="container-x py-8">
+  <div class="flex flex-wrap gap-2 mb-6" aria-label="Categories">
+    <a href="/products" class="px-4 py-2 rounded-full text-sm border <%= activeCat === 'all' ? 'bg-ink text-white border-ink' : 'border-neutral-300 hover:border-ink' %>">All</a>
+    <% categories.forEach((c) => { %>
+      <a href="/collections/<%= c.slug %>" class="px-4 py-2 rounded-full text-sm border <%= activeCat === c.slug ? 'bg-ink text-white border-ink' : 'border-neutral-300 hover:border-ink' %>"><%= c.name %></a>
+    <% }) %>
+  </div>
+  <div class="flex items-center justify-between mb-6 gap-4">
+    <p class="text-sm text-neutral-600"><%= list.length %> product<%= list.length === 1 ? '' : 's' %></p>
+    <form method="get" class="flex items-center gap-2 text-sm">
+      <% if (typeof q !== 'undefined' && q) { %><input type="hidden" name="q" value="<%= q %>"><% } %>
+      <label for="sort">Sort by</label>
+      <select id="sort" name="sort" data-autosubmit class="border border-neutral-300 rounded-lg px-3 py-2 bg-white">
+        <% [['featured','Featured'],['price-asc','Price: low to high'],['price-desc','Price: high to low'],['name-asc','Name: A to Z']].forEach(([v, l]) => { %>
+          <option value="<%= v %>" <%= sort === v ? 'selected' : '' %>><%= l %></option>
+        <% }) %>
+      </select>
+      <noscript><button class="btn-outline py-2">Apply</button></noscript>
+    </form>
+  </div>
+  <% if (list.length) { %>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
+      <% list.forEach((p) => { %><%- include('partials/product-card', { p }) %><% }) %>
+    </div>
+  <% } else { %>
+    <div class="text-center py-20">
+      <p class="font-display text-2xl">No products match that search</p>
+      <p class="mt-2 text-neutral-600">Try a shorter word, such as "bottle" or "tiffin".</p>
+      <a href="/products" class="btn-dark mt-6">Browse all products</a>
+    </div>
+  <% } %>
+</div>
+<%- include('partials/footer') %>

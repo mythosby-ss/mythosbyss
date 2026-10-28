@@ -1,0 +1,3 @@
+{
+  "_help": "Optional. Map a product slug to a Google Drive FILE id (or full URL, or an array of them). Example: \"crystal-casserole\": [\"1AbC...fileId\", \"https://.../second.jpg\"]. Files must be shared 'Anyone with the link'. Local files in public/images/products/<slug>.jpg are used when there is no mapping."
+}

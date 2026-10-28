@@ -1,0 +1,13 @@
+<%- include('partials/header') %>
+<div class="container-x py-14 max-w-md">
+  <h1 class="text-4xl font-semibold">Track your order</h1>
+  <p class="mt-2 text-neutral-600">Enter the order ID from your confirmation and the mobile number you used at checkout.</p>
+  <% if (error) { %><p role="alert" class="mt-5 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3"><%= error %></p><% } %>
+  <form method="post" action="/track" class="mt-6 space-y-4">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div><label class="label" for="orderId">Order ID</label><input class="field" id="orderId" name="orderId" required placeholder="MB..."></div>
+    <div><label class="label" for="phone">Mobile number</label><input class="field" id="phone" name="phone" inputmode="numeric" maxlength="10" required></div>
+    <button class="btn-dark w-full py-4">Find my order</button>
+  </form>
+</div>
+<%- include('partials/footer') %>

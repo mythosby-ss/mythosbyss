@@ -1,0 +1,52 @@
+<%- include('head') %>
+<div class="bg-ink text-white text-center text-sm py-2.5 px-4">Save min 50% on all orders and get free shipping</div>
+<header class="border-b border-neutral-200 bg-white sticky top-0 z-30">
+  <div class="container-x">
+    <div class="grid grid-cols-[auto_1fr_auto] md:grid-cols-3 items-center gap-4 py-3">
+      <form action="/products" method="get" role="search" class="hidden md:block max-w-xs">
+        <label class="sr-only" for="search">Search products</label>
+        <div class="flex items-center border border-neutral-300 rounded-lg px-3 focus-within:border-gold">
+          <svg class="w-5 h-5 text-neutral-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="search" name="q" value="<%= q %>" placeholder="Search" class="w-full px-3 py-2.5 text-sm bg-transparent outline-none">
+        </div>
+      </form>
+      <button type="button" data-menu-toggle class="md:hidden p-2 -ml-2" aria-label="Open menu" aria-expanded="false">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <a href="/" class="justify-self-center flex flex-col items-center leading-none" aria-label="MythosBySS home">
+        <span class="font-display text-2xl md:text-3xl font-semibold tracking-wide">MythosBySS</span>
+        <span class="text-[10px] text-gold-dark mt-1">Deserve to be noticed</span>
+      </a>
+      <div class="justify-self-end flex items-center gap-1">
+        <a href="/track" class="p-2 hover:text-gold-dark" aria-label="Track your order" title="Track your order">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+        </a>
+        <a href="/cart" class="relative p-2 hover:text-gold-dark" aria-label="Cart, <%= cartCount %> items">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg>
+          <span data-cart-count class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-gold text-white text-[11px] font-semibold flex items-center justify-center <%= cartCount ? '' : 'hidden' %>"><%= cartCount %></span>
+        </a>
+      </div>
+    </div>
+    <nav id="main-nav" class="hidden md:flex justify-center gap-2 pb-0 text-sm font-medium" aria-label="Main">
+      <% const links = [['Home','/','home'],['Water bottles','/collections/water-bottle','water-bottle'],['Lunch box','/collections/lunch-box','lunch-box'],['New arrivals','/new-arrivals','new'],['All products','/products','all']]; %>
+      <% links.forEach(([label, href]) => { const active = href === '/' ? path === '/' : path.startsWith(href); %>
+        <a href="<%= href %>" class="px-4 py-3 border-b-2 <%= active ? 'border-ink' : 'border-transparent hover:border-neutral-300' %>" <%- active ? 'aria-current="page"' : '' %>><%= label %></a>
+      <% }) %>
+      <div class="relative group">
+        <button type="button" class="px-4 py-3 border-b-2 border-transparent hover:border-neutral-300" aria-haspopup="true">More</button>
+        <div class="hidden group-hover:block group-focus-within:block absolute right-0 top-full w-56 bg-white border border-neutral-200 shadow-lg py-2 rounded-lg">
+          <% categories.forEach((c) => { %><a class="block px-4 py-2 hover:bg-gold-soft" href="/collections/<%= c.slug %>"><%= c.name %></a><% }) %>
+        </div>
+      </div>
+    </nav>
+  </div>
+  <div id="mobile-menu" class="hidden md:hidden border-t border-neutral-200 bg-white">
+    <form action="/products" method="get" class="p-4"><input name="q" placeholder="Search products" class="field"></form>
+    <a class="block px-5 py-3 border-t" href="/">Home</a>
+    <a class="block px-5 py-3 border-t" href="/new-arrivals">New arrivals</a>
+    <a class="block px-5 py-3 border-t" href="/products">All products</a>
+    <% categories.forEach((c) => { %><a class="block px-5 py-3 border-t text-neutral-700" href="/collections/<%= c.slug %>"><%= c.name %></a><% }) %>
+  </div>
+</header>
+<div id="toast" role="status" aria-live="polite" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 hidden bg-ink text-white text-sm px-5 py-3 rounded-full shadow-lg"></div>
+<main class="flex-1">

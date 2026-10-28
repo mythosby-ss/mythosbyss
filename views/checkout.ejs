@@ -1,0 +1,74 @@
+<%- include('partials/header') %>
+<div class="container-x py-10">
+  <h1 class="text-4xl font-semibold">Checkout</h1>
+  <form id="checkout-form" novalidate class="mt-8 grid lg:grid-cols-[1fr_400px] gap-10"
+        data-rzp-enabled="<%= onlineEnabled %>" data-mode="<%= buyNow ? 'buynow' : 'cart' %>"
+        data-pricing="<%= JSON.stringify(pricing) %>">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <input type="hidden" name="mode" value="<%= buyNow ? 'buynow' : 'cart' %>">
+
+    <div class="space-y-10">
+      <section aria-labelledby="c-h">
+        <h2 id="c-h" class="text-2xl font-semibold">Contact &amp; delivery</h2>
+        <div class="mt-5 grid sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2"><label class="label" for="name">Full name</label><input class="field" id="name" name="name" autocomplete="name" required><p class="err text-xs text-red-600 mt-1" data-err="name"></p></div>
+          <div><label class="label" for="email">Email</label><input class="field" id="email" name="email" type="email" autocomplete="email" required><p class="err text-xs text-red-600 mt-1" data-err="email"></p></div>
+          <div><label class="label" for="phone">Mobile number</label><input class="field" id="phone" name="phone" inputmode="numeric" maxlength="10" autocomplete="tel-national" required><p class="err text-xs text-red-600 mt-1" data-err="phone"></p></div>
+          <div class="sm:col-span-2"><label class="label" for="line1">Address</label><input class="field" id="line1" name="line1" autocomplete="address-line1" placeholder="House no., building, street" required><p class="err text-xs text-red-600 mt-1" data-err="line1"></p></div>
+          <div class="sm:col-span-2"><label class="label" for="line2">Landmark <span class="text-neutral-500 font-normal">(optional)</span></label><input class="field" id="line2" name="line2" autocomplete="address-line2"></div>
+          <div><label class="label" for="pincode">Pincode</label><input class="field" id="pincode" name="pincode" inputmode="numeric" maxlength="6" autocomplete="postal-code" required><p class="err text-xs text-red-600 mt-1" data-err="pincode"></p></div>
+          <div><label class="label" for="city">City</label><input class="field" id="city" name="city" autocomplete="address-level2" required><p class="err text-xs text-red-600 mt-1" data-err="city"></p></div>
+          <div class="sm:col-span-2"><label class="label" for="state">State</label>
+            <select class="field" id="state" name="state" autocomplete="address-level1" required>
+              <option value="">Select state</option>
+              <% states.forEach((s) => { %><option value="<%= s %>"><%= s %></option><% }) %>
+            </select><p class="err text-xs text-red-600 mt-1" data-err="state"></p></div>
+          <div class="sm:col-span-2"><label class="label" for="note">Order note <span class="text-neutral-500 font-normal">(optional)</span></label><textarea class="field" id="note" name="note" rows="2" maxlength="300"></textarea></div>
+        </div>
+      </section>
+
+      <fieldset>
+        <legend class="text-2xl font-semibold">Payment method</legend>
+        <div class="mt-5 space-y-3">
+          <label class="flex gap-4 items-start border border-neutral-300 rounded-xl p-4 cursor-pointer has-[:checked]:border-ink has-[:checked]:bg-paper">
+            <input type="radio" name="paymentMethod" value="prepaid" class="mt-1 accent-[#b07a2a]" <%= onlineEnabled ? 'checked' : 'disabled' %>>
+            <span class="flex-1"><span class="block font-semibold">Pay online</span><span class="block text-sm text-neutral-600">UPI, cards, netbanking and wallets via Razorpay. Pay <%= money(pricing.prepaid.total) %> now.</span><% if (!onlineEnabled) { %><span class="block text-xs text-red-600 mt-1">Temporarily unavailable.</span><% } %></span>
+          </label>
+          <label class="flex gap-4 items-start border border-neutral-300 rounded-xl p-4 cursor-pointer has-[:checked]:border-ink has-[:checked]:bg-paper">
+            <input type="radio" name="paymentMethod" value="partial_cod" class="mt-1 accent-[#b07a2a]" <%= onlineEnabled ? '' : 'disabled' %>>
+            <span class="flex-1"><span class="block font-semibold">Partial COD</span><span class="block text-sm text-neutral-600">Pay <%= partialPercent %>% (<%= money(pricing.partial_cod.payNow) %>) online now to confirm. Pay the remaining <%= money(pricing.partial_cod.dueOnDelivery) %> in cash on delivery.</span></span>
+          </label>
+          <label class="flex gap-4 items-start border border-neutral-300 rounded-xl p-4 cursor-pointer has-[:checked]:border-ink has-[:checked]:bg-paper">
+            <input type="radio" name="paymentMethod" value="cod" class="mt-1 accent-[#b07a2a]" <%= onlineEnabled ? '' : 'checked' %>>
+            <span class="flex-1"><span class="block font-semibold">Cash on delivery</span><span class="block text-sm text-neutral-600">Pay <%= money(pricing.cod.total) %> in cash when your order arrives.<% if (codFee) { %> Includes a <%= money(codFee) %> COD fee.<% } %></span></span>
+          </label>
+        </div>
+      </fieldset>
+      <p data-form-error role="alert" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3"></p>
+    </div>
+
+    <aside class="bg-paper rounded-2xl p-6 h-fit lg:sticky lg:top-28">
+      <h2 class="text-xl font-semibold">Your order</h2>
+      <ul class="mt-4 divide-y divide-neutral-200">
+        <% cart.items.forEach((i) => { %>
+        <li class="py-3 flex gap-3 text-sm">
+          <img src="<%= i.product.image %>" alt="" class="w-14 h-14 rounded-lg object-cover bg-white">
+          <div class="flex-1"><p class="font-medium"><%= i.product.name %></p><p class="text-neutral-500"><%= i.variant.label %> &times; <%= i.qty %></p></div>
+          <p class="font-semibold"><%= money(i.total) %></p>
+        </li>
+        <% }) %>
+      </ul>
+      <dl class="mt-4 space-y-2 text-sm border-t border-neutral-300 pt-4">
+        <div class="flex justify-between"><dt>Subtotal</dt><dd><%= money(cart.subtotal) %></dd></div>
+        <div class="flex justify-between"><dt>Shipping</dt><dd><%= cart.shipping ? money(cart.shipping) : 'Free' %></dd></div>
+        <div class="flex justify-between hidden" data-cod-fee-row><dt>COD fee</dt><dd><%= money(codFee) %></dd></div>
+        <div class="flex justify-between text-base font-semibold border-t border-neutral-300 pt-3"><dt>Total</dt><dd data-total><%= money(pricing.prepaid.total) %></dd></div>
+        <div class="flex justify-between text-green-800"><dt>Pay now</dt><dd data-pay-now></dd></div>
+        <div class="flex justify-between"><dt>Pay on delivery</dt><dd data-pay-due></dd></div>
+      </dl>
+      <button type="submit" data-submit class="btn-dark w-full mt-6 py-4 text-base">Place order</button>
+      <p class="mt-3 text-xs text-neutral-500 text-center">Payments are processed securely by Razorpay.</p>
+    </aside>
+  </form>
+</div>
+<%- include('partials/footer', { scripts: ['https://checkout.razorpay.com/v1/checkout.js', '/js/checkout.js'] }) %>

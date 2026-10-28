@@ -1,0 +1,36 @@
+<%- include('partials/header') %>
+<div class="container-x py-12 max-w-3xl">
+  <% const ok = order.status !== 'awaiting_payment' && order.status !== 'cancelled'; %>
+  <div class="text-center">
+    <div class="mx-auto w-14 h-14 rounded-full <%= ok ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' %> flex items-center justify-center text-2xl"><%= ok ? '\u2713' : '!' %></div>
+    <h1 class="text-4xl font-semibold mt-5"><%= ok ? 'Thank you, your order is placed' : 'Order not completed' %></h1>
+    <p class="mt-2 text-neutral-600">Order ID <strong class="text-ink"><%= order.id %></strong>. A confirmation goes to <%= order.customer.email %>.</p>
+    <% if (!ok) { %><p class="mt-2 text-amber-700 text-sm">Payment has not been received for this order.</p><% } %>
+  </div>
+
+  <div class="mt-10 grid sm:grid-cols-2 gap-6 text-sm">
+    <div class="bg-paper rounded-xl p-5">
+      <p class="font-semibold mb-2">Delivering to</p>
+      <p><%= order.customer.name %></p>
+      <p><%= order.address.line1 %><%= order.address.line2 ? ', ' + order.address.line2 : '' %></p>
+      <p><%= order.address.city %>, <%= order.address.state %> - <%= order.address.pincode %></p>
+      <p class="mt-1">Mobile <%= order.customer.phone %></p>
+    </div>
+    <div class="bg-paper rounded-xl p-5">
+      <p class="font-semibold mb-2">Payment</p>
+      <p><%= methods[order.paymentMethod] %></p>
+      <p class="mt-1">Status: <strong><%= order.payment.status.replace(/_/g, ' ') %></strong></p>
+      <% if (order.amounts.payNow > 0) { %><p>Paid online: <%= order.payment.status === 'paid' || order.payment.status === 'advance_paid' ? money(order.amounts.payNow) : '\u20B90' %></p><% } %>
+      <% if (order.amounts.dueOnDelivery > 0) { %><p class="font-semibold mt-1">Pay on delivery: <%= money(order.amounts.dueOnDelivery) %></p><% } %>
+    </div>
+  </div>
+
+  <ul class="mt-8 divide-y divide-neutral-200 border-y border-neutral-200 text-sm">
+    <% order.items.forEach((i) => { %><li class="py-3 flex justify-between gap-4"><span><%= i.name %> <span class="text-neutral-500">(<%= i.variant %>) &times; <%= i.qty %></span></span><span><%= money(i.total) %></span></li><% }) %>
+    <li class="py-3 flex justify-between"><span>Shipping</span><span><%= order.amounts.shipping ? money(order.amounts.shipping) : 'Free' %></span></li>
+    <% if (order.amounts.codFee) { %><li class="py-3 flex justify-between"><span>COD fee</span><span><%= money(order.amounts.codFee) %></span></li><% } %>
+    <li class="py-3 flex justify-between font-semibold text-base"><span>Total</span><span><%= money(order.amounts.total) %></span></li>
+  </ul>
+  <div class="mt-8 text-center"><a href="/products" class="btn-dark">Continue shopping</a></div>
+</div>
+<%- include('partials/footer') %>

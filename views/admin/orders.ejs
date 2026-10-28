@@ -1,0 +1,29 @@
+<%- include('../partials/head') %>
+<div class="container-x py-10">
+  <div class="flex items-center justify-between"><h1 class="text-3xl font-semibold">Orders (<%= orders.length %>)</h1><a href="/" class="text-sm underline">View store</a></div>
+  <div class="mt-6 overflow-x-auto border border-neutral-200 rounded-xl">
+    <table class="w-full text-sm">
+      <thead class="bg-paper text-left"><tr><th class="p-3">Order</th><th class="p-3">Customer</th><th class="p-3">Items</th><th class="p-3">Payment</th><th class="p-3">Collect on delivery</th><th class="p-3">Status</th></tr></thead>
+      <tbody>
+      <% orders.forEach((o) => { %>
+        <tr class="border-t border-neutral-200 align-top">
+          <td class="p-3"><strong><%= o.id %></strong><br><span class="text-neutral-500"><%= new Date(o.createdAt).toLocaleString('en-IN') %></span></td>
+          <td class="p-3"><%= o.customer.name %><br><%= o.customer.phone %><br><span class="text-neutral-500"><%= o.address.line1 %>, <%= o.address.city %>, <%= o.address.state %> <%= o.address.pincode %></span></td>
+          <td class="p-3"><% o.items.forEach((i) => { %><%= i.name %> (<%= i.variant %>) &times; <%= i.qty %><br><% }) %></td>
+          <td class="p-3"><%= o.paymentMethod.replace('_', ' ') %><br>Total <%= money(o.amounts.total) %><br><span class="text-neutral-500"><%= o.payment.status.replace(/_/g, ' ') %></span></td>
+          <td class="p-3 font-semibold"><%= money(o.amounts.dueOnDelivery) %></td>
+          <td class="p-3">
+            <form method="post" action="/admin/orders/<%= o.id %>/status" class="flex gap-2">
+              <input type="hidden" name="_csrf" value="<%= csrf %>">
+              <select name="status" class="border border-neutral-300 rounded px-2 py-1"><% statuses.forEach((s) => { %><option value="<%= s %>" <%= o.status === s ? 'selected' : '' %>><%= s.replace('_', ' ') %></option><% }) %></select>
+              <button class="btn-dark py-1 px-3 text-xs">Save</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (!orders.length) { %><tr><td colspan="6" class="p-8 text-center text-neutral-500">No orders yet.</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body></html>
