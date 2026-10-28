@@ -1,29 +1,88 @@
 </main>
-<footer class="bg-ink text-neutral-300 mt-20">
-  <div class="container-x py-12 grid gap-10 md:grid-cols-4">
-    <div class="md:col-span-2">
-      <p class="font-display text-2xl text-white">MythosBySS</p>
-      <p class="mt-3 max-w-sm text-sm leading-relaxed">Kitchen, home and everyday utility products made to be noticed. Insulated, leak-proof, BPA-free and food grade.</p>
+<footer class="mt-16 bg-black text-neutral-200">
+  <div class="container-x py-10 md:py-12">
+    <div class="grid gap-9 md:grid-cols-[1.35fr_0.8fr] md:gap-16">
+      <section aria-labelledby="footer-brand">
+        <a href="/" class="inline-flex items-center gap-3" aria-label="MythosBySS home">
+          <img src="/images/logo/Mythos_Logo_TM.png" alt="" class="h-16 w-auto max-w-[78px] object-contain invert" width="78" height="70" loading="lazy">
+          <span id="footer-brand" class="text-xl font-medium tracking-wide">MYTHOS BY SS</span>
+        </a>
+        <p class="mt-4 max-w-2xl text-sm leading-6 text-neutral-300">MythosBySS brings you quality everyday essentials for your home, kitchen, hydration and gifting needs. Discover useful products designed to combine function, style and value.</p>
+        <div class="mt-5 flex flex-wrap gap-3 text-sm">
+          <a class="rounded-full border border-white/30 px-4 py-2 transition hover:border-white hover:text-white" href="/products">Shop all products</a>
+          <a class="rounded-full border border-white/30 px-4 py-2 transition hover:border-white hover:text-white" href="/pages/contact">Contact us</a>
+        </div>
+      </section>
+
+      <section aria-labelledby="footer-contact">
+        <h2 id="footer-contact" class="mb-3 text-lg font-semibold text-white">Contact Us</h2>
+        <ul class="space-y-2.5 text-sm leading-6 text-neutral-300">
+          <li><span class="text-white">Call:</span> <a class="hover:text-white" href="tel:+917668757937">+91 7668757937</a></li>
+          <li><span class="text-white">WhatsApp:</span> <a class="hover:text-white" href="https://wa.me/917668757937" target="_blank" rel="noopener noreferrer">+91 7668757937</a></li>
+          <li><span class="text-white">Email:</span> <a class="break-all hover:text-white" href="mailto:mythosbyss@gmail.com">mythosbyss@gmail.com</a></li>
+          <li><span class="text-white">Customer support:</span> Please contact us by phone or email.</li>
+          <li><span class="text-white">Address:</span> H.N. No. 37D/JRB/25, Jaganpura, Jay Ram Bagh Mauza, Agra, Uttar Pradesh 282005, India.</li>
+        </ul>
+      </section>
     </div>
-    <div>
-      <p class="text-white font-semibold mb-3">Shop</p>
-      <ul class="space-y-2 text-sm">
-        <% categories.slice(0,6).forEach((c) => { %><li><a class="hover:text-white" href="/collections/<%= c.slug %>"><%= c.name %></a></li><% }) %>
-      </ul>
-    </div>
-    <div>
-      <p class="text-white font-semibold mb-3">Help</p>
-      <ul class="space-y-2 text-sm">
-        <li><a class="hover:text-white" href="/track">Track your order</a></li>
-        <li><a class="hover:text-white" href="/pages/shipping-policy">Shipping policy</a></li>
-        <li><a class="hover:text-white" href="/pages/returns">Returns &amp; refunds</a></li>
-        <li><a class="hover:text-white" href="/pages/privacy-policy">Privacy policy</a></li>
-        <li><a class="hover:text-white" href="/pages/terms">Terms of service</a></li>
-        <li><a class="hover:text-white" href="/pages/contact">Contact us</a></li>
-      </ul>
+
+    <nav class="mt-9 border-y border-white/30 py-4" aria-label="Customer information">
+      <div class="flex flex-wrap gap-x-8 gap-y-3 text-sm font-medium">
+        <a class="hover:text-white" href="/pages/about-us">About Us</a>
+        <a class="hover:text-white" href="/pages/returns">Return Policy</a>
+        <a class="hover:text-white" href="/pages/terms">Terms &amp; Conditions</a>
+        <a class="hover:text-white" href="/pages/privacy-policy">Privacy Policy</a>
+        <a class="hover:text-white" href="/pages/shipping-policy">Shipping Policy</a>
+        <a class="hover:text-white" href="/track">Track Order</a>
+      </div>
+    </nav>
+
+    <div class="mt-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:text-sm">
+        <span class="font-semibold text-white">Explore</span>
+        <a class="hover:text-white" href="/collections/water-bottle">Water Bottles</a>
+        <a class="hover:text-white" href="/collections/lunch-box">Lunch Boxes</a>
+        <a class="hover:text-white" href="/products">Best Sellers</a>
+        <a class="hover:text-white" href="/new-arrivals">New Arrivals</a>
+        <% categories.slice(0,3).forEach((c) => { %><a class="hover:text-white" href="/collections/<%= c.slug %>"><%= c.name %></a><% }) %>
+      </div>
+
+      <div
+        class="flex flex-wrap items-center gap-2"
+        aria-label="Accepted payment methods"
+      >
+        <% const paymentMethods = [
+          { name: 'PhonePe', logo: '/images/payments/phonepe.svg' },
+          { name: 'Google Pay', logo: '/images/payments/google-pay.svg' },
+          { name: 'Paytm', logo: '/images/payments/paytm.svg' },
+          { name: 'UPI', logo: '/images/payments/upi.svg' },
+          { name: 'RuPay', logo: '/images/payments/rupay.svg' },
+          { name: 'Mastercard', logo: '/images/payments/mastercard.svg' },
+          { name: 'Visa', logo: '/images/payments/visa.svg' }
+        ]; %>
+
+        <% paymentMethods.forEach(method => { %>
+          <div
+            class="flex h-10 min-w-[72px] items-center justify-center rounded-sm bg-white px-2.5"
+            title="<%= method.name %>"
+          >
+            <img
+              src="<%= method.logo %>"
+              alt="<%= method.name %>"
+              class="h-5 w-auto max-w-[62px] object-contain"
+              width="62"
+              height="24"
+              loading="lazy"
+            >
+          </div>
+        <% }); %>
+      </div>
+
     </div>
   </div>
-  <div class="border-t border-white/10 py-5 text-center text-xs text-neutral-400">&copy; <%= new Date().getFullYear() %> MythosBySS&trade;. All rights reserved.</div>
+  <div class="border-t border-white/20 px-4 py-5 text-center text-xs text-neutral-400">
+    &copy; <%= new Date().getFullYear() %> MythosBySS&trade;. All rights reserved.
+  </div>
 </footer>
 <script src="/js/app.js" defer></script>
 <% if (typeof scripts !== 'undefined') { scripts.forEach((s) => { %><script src="<%= s %>" defer></script><% }) } %>
