@@ -1,12 +1,6 @@
 /**
- * Product data extracted from "MythosBySS B2B Catalog (Updated).pdf".
- *
- * Variant tuple:  [label, itemCode, priceINR, masterPackPcs]
- *  - itemCode is the catalog code; the SKU becomes  MB-NK-N-<itemCode>
- *  - masterPackPcs is the carton quantity from the catalog table (wholesale info)
- *
- * !! The PDF has NO prices. Every price below is a PLACEHOLDER - replace with real
- *    selling prices. MRP is auto-computed as 2x price ("Save min 50%" banner).
+ * Legacy catalog snapshot retained for reference only; the app does not load it.
+ * The database is the source of truth. Prices in this file are placeholders.
  */
 const categories = [
   { slug: 'casserole',     name: 'Casserole',     blurb: 'Double-walled insulated casseroles that keep food hot and fresh for hours.' },

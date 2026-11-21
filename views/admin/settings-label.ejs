@@ -1,0 +1,40 @@
+<%- include('partials/top') %>
+<form method="post" action="/admin/settings/label" enctype="multipart/form-data" class="a-card p-5 max-w-3xl space-y-5">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <div>
+    <h2 class="a-h">Shipping label</h2>
+    <p class="text-sm text-neutral-500 mt-1">Applies to labels printed from an order (4 × 6 inch). If your courier (e.g. Shiprocket) gives its own barcode label, use that for the courier and this one for packing.</p>
+  </div>
+  <div>
+    <label class="a-lbl" for="label_type">Label type</label>
+    <select class="a-in" id="label_type" name="label_type">
+      <% [['without_invoice', 'Label only (without invoice)'], ['with_invoice', 'Label + tax invoice (printed together)']].forEach(([v, l]) => { %>
+        <option value="<%= v %>" <%= s.label_type === v ? 'selected' : '' %>><%= l %></option><% }) %>
+    </select>
+  </div>
+  <div class="space-y-2">
+    <p class="a-lbl">Brand logo</p>
+    <% if (s.label_logo) { %>
+      <div class="flex items-center gap-3 rounded-lg border border-neutral-200 p-2">
+        <img src="<%= imgUrl(s.label_logo) %>" alt="Current label logo" class="h-12 w-12 object-contain">
+        <span class="text-xs text-neutral-500 flex-1">Current logo</span>
+        <label class="text-sm text-red-600 flex items-center gap-1.5"><input type="checkbox" name="remove_logo" value="1"> Remove</label>
+      </div>
+    <% } %>
+    <div class="grid md:grid-cols-2 gap-3">
+      <input class="a-in" type="file" name="logo" accept="image/png,image/jpeg,image/webp">
+      <input class="a-in" name="logo_link" placeholder="...or paste a Drive / https image link">
+    </div>
+    <p class="text-xs text-neutral-400">JPG, PNG or WEBP, up to 2 MB. A square or wide black-and-white logo prints best on thermal printers.</p>
+  </div>
+  <fieldset class="grid sm:grid-cols-2 gap-x-6 gap-y-2.5 border-t border-neutral-100 pt-5">
+    <legend class="a-lbl mb-2">Show on label</legend>
+    <% flags.forEach(([k, l]) => { %>
+      <label class="flex items-start gap-2 text-sm"><input type="checkbox" class="mt-0.5" name="<%= k %>" value="1" <%= s[k] === '1' ? 'checked' : '' %>> <%= l %></label>
+    <% }) %>
+  </fieldset>
+  <% if (!s.biz_address) { %><p class="text-sm rounded-lg bg-amber-50 border border-amber-200 text-amber-800 p-3">Your return address and phone come from <a class="underline" href="/admin/settings/billing">Billing &amp; invoice</a>. Fill that in first.</p><% } %>
+  <div class="flex flex-wrap items-center gap-3"><button class="a-btn px-6 py-3">Save</button>
+    <% if (previewOrder) { %><a class="a-btn-o" target="_blank" href="/admin/orders/<%= previewOrder %>/label">Preview with latest order ↗</a><% } %></div>
+</form>
+<%- include('partials/bottom') %>

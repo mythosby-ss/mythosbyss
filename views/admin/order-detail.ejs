@@ -1,0 +1,74 @@
+<%- include('partials/top') %>
+<div class="grid xl:grid-cols-3 gap-6">
+  <div class="xl:col-span-2 space-y-6">
+    <section class="a-card p-5">
+      <div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="a-h"><%= o.id %></h2><p class="text-sm text-neutral-500">Placed <%= dt(o.created_at) %></p></div><div class="flex gap-2"><%- pill(o.status) %> <%- pill(o.payment_status) %></div></div>
+      <table class="a-table mt-4"><thead><tr><th>Item</th><th>SKU</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>
+        <% o.items.forEach((i) => { %><tr><td><%= i.product_name %> <span class="text-neutral-500">(<%= i.variant_label %>)</span></td><td><%= i.sku %></td><td><%= i.qty %></td><td><%= money(i.unit_price) %></td><td><%= money(i.unit_price * i.qty) %></td></tr><% }) %></tbody></table>
+      <dl class="mt-4 ml-auto max-w-xs text-sm space-y-1">
+        <div class="flex justify-between"><dt>Subtotal</dt><dd><%= money(o.subtotal) %></dd></div>
+        <% if (o.discount) { %><div class="flex justify-between text-green-700"><dt>Discount <%= o.coupon_code ? '(' + o.coupon_code + ')' : '' %></dt><dd>-<%= money(o.discount) %></dd></div><% } %>
+        <div class="flex justify-between"><dt>Shipping</dt><dd><%= money(o.shipping_fee) %></dd></div>
+        <% if (o.cod_fee) { %><div class="flex justify-between"><dt>COD fee</dt><dd><%= money(o.cod_fee) %></dd></div><% } %>
+        <div class="flex justify-between font-semibold border-t pt-1"><dt>Total</dt><dd><%= money(o.total) %></dd></div>
+        <div class="flex justify-between"><dt>Paid online</dt><dd><%= money(['paid','advance_paid','refunded','partially_refunded'].includes(o.payment_status) ? o.pay_now : 0) %></dd></div>
+        <div class="flex justify-between"><dt>To collect on delivery</dt><dd><%= money(o.status === 'delivered' ? 0 : o.due_on_delivery) %></dd></div>
+        <% if (o.refunded) { %><div class="flex justify-between text-red-600"><dt>Refunded</dt><dd>-<%= money(o.refunded) %></dd></div><% } %>
+      </dl>
+    </section>
+
+    <section class="a-card p-5"><h2 class="a-h mb-4">Timeline</h2>
+      <ol class="space-y-3 text-sm"><% o.events.forEach((e) => { %><li class="flex gap-3"><span class="mt-1.5 w-2 h-2 rounded-full bg-adm-blue shrink-0"></span><div><b><%= e.status ? statusLabel[e.status] : 'Note' %></b> <span class="text-neutral-500">&middot; <%= dt(e.at) %> &middot; <%= e.actor %></span><% if (e.note) { %><p class="text-neutral-600"><%= e.note %></p><% } %></div></li><% }) %></ol></section>
+
+    <section class="a-card overflow-x-auto"><h2 class="a-h p-5 pb-3">WhatsApp messages</h2>
+      <table class="a-table"><thead><tr><th>When</th><th>Template</th><th>Status</th><th>Error</th></tr></thead><tbody><% o.logs.forEach((l) => { %><tr><td><%= dt(l.created_at) %><% if (l.status === 'scheduled') { %><br><span class="text-xs text-neutral-500">due <%= dt(l.send_at) %></span><% } %></td><td><%= l.template %></td><td><%- pill(l.status) %></td><td class="text-red-600"><%= l.error || '' %></td></tr><% }) %><% if (!o.logs.length) { %><tr><td colspan="4" class="text-neutral-500">No messages yet.</td></tr><% } %></tbody></table></section>
+  </div>
+
+  <div class="space-y-6">
+    <section class="a-card p-5"><h2 class="a-h mb-3">Update status</h2>
+      <% if (next.length) { %>
+      <% next.forEach((s) => { %>
+      <form method="post" action="/admin/orders/<%= o.id %>/status" class="border-t first:border-0 py-3 space-y-2" <% if (s === 'cancelled' || s === 'rto') { %>data-confirm="Are you sure? Stock will be restored."<% } %>>
+        <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="status" value="<%= s %>">
+        <% if (s === 'shipped') { %>
+          <div class="grid grid-cols-2 gap-2"><div><label class="a-lbl">Courier</label><input class="a-in" name="courier" value="<%= o.courier || '' %>" placeholder="e.g. Delhivery" required></div><div><label class="a-lbl">AWB</label><input class="a-in" name="awb" value="<%= o.awb || '' %>" required></div></div>
+          <div><label class="a-lbl">Courier charge (your cost)</label><input class="a-in" type="number" step="0.01" name="courier_charge" value="<%= o.courier_charge || '' %>"></div>
+        <% } %>
+        <% if (s === 'cancelled' || s === 'rto') { %><input class="a-in" name="note" placeholder="Reason (optional)"><% } %>
+        <button class="<%= s === 'cancelled' || s === 'rto' ? 'a-btn-r' : 'a-btn' %> w-full">Mark as <%= statusLabel[s] %></button>
+      </form>
+      <% }) %>
+      <p class="text-xs text-neutral-500">Shipped, out-for-delivery and delivered updates are sent to the customer on WhatsApp automatically.</p>
+      <% } else { %><p class="text-sm text-neutral-500">This order is <%= statusLabel[o.status].toLowerCase() %> and cannot change further.</p><% } %>
+    </section>
+
+    <section class="a-card p-5 text-sm"><h2 class="a-h mb-3">Customer</h2>
+      <p><b><%= o.name %></b></p><p><%= o.phone %> &middot; <%= o.email %></p>
+      <p class="mt-2"><%= o.address %>, <%= o.city %>, <%= o.state %> - <%= o.pincode %></p>
+      <% if (o.note) { %><p class="mt-2 text-neutral-600">Note: <%= o.note %></p><% } %>
+      <p class="mt-2 text-xs text-neutral-500">Source: <%= o.utm_source || 'direct' %><%= o.utm_campaign ? ' / ' + o.utm_campaign : '' %></p>
+      <a class="a-btn-o mt-3" target="_blank" href="/admin/orders/<%= o.id %>/label">Print label</a> <a class="a-btn-o mt-3" target="_blank" href="/admin/orders/<%= o.id %>/invoice">Tax invoice</a> <a class="a-btn-o mt-3" href="/admin/customers/<%= o.customer_id %>">Customer</a>
+    </section>
+
+    <section class="a-card p-5"><h2 class="a-h mb-3">Logistics</h2>
+      <form method="post" action="/admin/orders/<%= o.id %>/logistics" class="space-y-2">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <div><label class="a-lbl">Courier</label><input class="a-in" name="courier" value="<%= o.courier || '' %>"></div>
+        <div><label class="a-lbl">AWB / tracking number</label><input class="a-in" name="awb" value="<%= o.awb || '' %>"></div>
+        <div><label class="a-lbl">Courier charge</label><input class="a-in" type="number" step="0.01" name="courier_charge" value="<%= o.courier_charge || 0 %>"></div>
+        <button class="a-btn-o w-full">Save logistics</button>
+      </form></section>
+
+    <% if (o.refunded < o.total && o.status !== 'awaiting_payment') { %>
+    <section class="a-card p-5"><h2 class="a-h mb-3">Refund</h2>
+      <form method="post" action="/admin/orders/<%= o.id %>/refund" class="space-y-2" data-confirm="Record this refund? Razorpay refunds cannot be undone.">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <div><label class="a-lbl">Amount (max <%= money(o.total - o.refunded) %>)</label><input class="a-in" type="number" step="0.01" name="amount" value="<%= o.status === 'cancelled' ? o.pay_now - o.refunded : '' %>" required></div>
+        <div><label class="a-lbl">Method</label><select class="a-in" name="method"><% if (rzpOn && o.razorpay_payment_id) { %><option value="razorpay">Razorpay (to original payment)</option><% } %><option value="manual">Manual (already refunded / cash / UPI)</option></select></div>
+        <div><label class="a-lbl">Reason</label><input class="a-in" name="reason"></div>
+        <button class="a-btn-r w-full">Issue refund</button>
+      </form></section>
+    <% } %>
+  </div>
+</div>
+<%- include('partials/bottom') %>

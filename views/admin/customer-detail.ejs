@@ -1,0 +1,4 @@
+<%- include('partials/top') %>
+<section class="a-card p-5 text-sm"><h2 class="a-h"><%= c.name || 'Customer' %></h2><p><%= c.phone %> &middot; <%= c.email || 'no email' %></p><p class="text-neutral-500">Joined <%= dt(c.created_at) %> &middot; Last login <%= dt(c.last_login) %> <%- c.blocked ? pill('Blocked', 'red') : '' %></p></section>
+<section class="a-card overflow-x-auto"><h2 class="a-h p-5 pb-3">Orders</h2><table class="a-table"><thead><tr><th>Order</th><th>Date</th><th>Mode</th><th>Total</th><th>Status</th></tr></thead><tbody><% orders.forEach((o) => { %><tr><td><a class="text-adm-blue" href="/admin/orders/<%= o.id %>"><%= o.id %></a></td><td><%= dt(o.created_at) %></td><td><%= o.payment_method.replace('_',' ') %></td><td><%= money(o.total) %></td><td><%- pill(o.status) %></td></tr><% }) %></tbody></table></section>
+<%- include('partials/bottom') %>

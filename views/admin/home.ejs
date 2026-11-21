@@ -1,0 +1,426 @@
+<%- include('partials/top') %>
+
+<%
+  const fmtPct = (n) => (n >= 0 ? '+' : '') + n + '%';
+  const clsPct = (n) => n >= 0 ? 'text-green-600' : 'text-red-500';
+%>
+
+<!-- ═══════════════════ TOP KPI STRIP ═══════════════════ -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+  <div class="kpi relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-adm-blue/5 to-adm-blue/10 rounded-xl pointer-events-none"></div>
+    <b class="text-2xl text-adm-blue"><%= today.orders || 0 %></b>
+    <span>Orders today</span>
+    <p class="text-xs text-neutral-400 mt-1">Revenue: <%= money(today.revenue || 0) %></p>
+  </div>
+
+  <div class="kpi relative overflow-hidden">
+    <a href="/admin/orders" class="absolute inset-0 rounded-xl"></a>
+    <div class="absolute inset-0 bg-gradient-to-br from-amber-50 to-amber-100/60 rounded-xl pointer-events-none"></div>
+    <b class="text-2xl <%= pending > 0 ? 'text-amber-600' : '' %>"><%= pending %></b>
+    <span>Orders to dispatch</span>
+    <p class="text-xs text-neutral-400 mt-1">Tap to process →</p>
+  </div>
+
+  <div class="kpi relative overflow-hidden">
+    <a href="/admin/inventory?f=low" class="absolute inset-0 rounded-xl"></a>
+    <div class="absolute inset-0 bg-gradient-to-br from-red-50 to-red-100/50 rounded-xl pointer-events-none"></div>
+    <b class="text-2xl <%= lowStock > 0 ? '!text-red-600' : '' %>"><%= lowStock %></b>
+    <span>Low / out-of-stock SKUs</span>
+    <p class="text-xs text-neutral-400 mt-1"><%= lowStock > 0 ? 'Action needed' : 'All good' %></p>
+  </div>
+
+  <div class="kpi relative overflow-hidden">
+    <a href="/admin/customers" class="absolute inset-0 rounded-xl"></a>
+    <div class="absolute inset-0 bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl pointer-events-none"></div>
+    <b class="text-2xl text-green-600"><%= money(monthSales || 0) %></b>
+    <span>This month's revenue</span>
+    <p class="text-xs text-neutral-400 mt-1"><%= monthOrders || 0 %> confirmed orders</p>
+  </div>
+</div>
+
+<!-- ═══════════════════ ADS: META + GOOGLE ═══════════════════ -->
+<%
+  const tm = (d) => d ? d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit' }) : '';
+  const adCard = (c, name, logo) => { %>
+  <section class="a-card p-5 flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <span class="flex items-center gap-2 font-semibold text-base"><%- logo %><%= name %></span>
+      <% if (c.live) { %><span class="text-[11px] uppercase tracking-wide text-neutral-400 border-l border-neutral-200 pl-3">Updated <%= tm(c.updatedAt) %> today</span>
+      <% } else if (c.connected && c.error) { %><span class="pill pill-red" title="<%= c.error %>">Sync failed</span>
+      <% } else if (!c.connected) { %><span class="text-[11px] uppercase tracking-wide text-neutral-400 border-l border-neutral-200 pl-3"><%= c.hasManual ? 'Manual spend' : 'Not connected' %></span><% } %>
+      <span class="ml-auto flex items-center gap-3 text-sm">
+        <% if (c.connected) { %><a class="text-neutral-500 hover:text-adm-blue" href="/admin?refresh=ads" title="Refresh now">↻</a><% } %>
+        <a class="text-adm-blue font-medium hover:underline" href="<%= c.link %>" target="_blank" rel="noopener">Go to <%= name.split(' ')[0] %> ↗</a>
+      </span>
+    </div>
+    <div class="grid grid-cols-3 gap-3">
+      <div class="rounded-lg bg-adm-blue/5 p-3"><p class="text-[11px] uppercase tracking-wide text-neutral-500">Today's spend</p><b class="text-xl"><%= money(c.spend) %></b></div>
+      <div class="rounded-lg bg-adm-blue/5 p-3"><p class="text-[11px] uppercase tracking-wide text-neutral-500" title="Today's spend ÷ today's orders from these ads">Cost per order</p><b class="text-xl <%= c.cpo === null ? 'text-neutral-400' : 'text-green-700' %>"><%= c.cpo === null ? '--' : money(c.cpo) %></b></div>
+      <div class="rounded-lg bg-adm-blue/5 p-3"><p class="text-[11px] uppercase tracking-wide text-neutral-500" title="Today's confirmed orders whose visit came from these ads (UTM / click id)">Orders</p><b class="text-xl"><%= c.orders %></b></div>
+    </div>
+    <% if (c.connected && c.error) { %><p class="text-xs text-red-600">Could not read today's spend: <%= c.error %></p>
+    <% } else if (!c.connected) { %><p class="text-xs text-neutral-500">Connect <a class="text-adm-blue hover:underline" href="/admin/plugins#<%= c.platform === 'meta' ? 'metaads' : 'googleads' %>"><%= name %> in Plugins</a> to show live spend.<%= c.hasManual ? ' Showing spend entered under Performance marketing.' : '' %></p><% } %>
+  </section>
+<% } %>
+<div class="grid lg:grid-cols-2 gap-4">
+  <% adCard(metaCard, 'Meta', '<svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="#0866ff" stroke-width="2.2" stroke-linecap="round"><path d="M3 15c0-4 2-8 4.5-8 3 0 6 10 9 10 2 0 4.5-1.5 4.5-5S19 7 16.5 7c-3 0-6 10-9 10C5 17 3 16.5 3 15z"/></svg>'); %>
+  <% adCard(googleCard, 'Google Ads', '<svg class="w-6 h-6" viewBox="0 0 24 24"><path d="M9.5 4.5l-6 10.4a3 3 0 105.2 3l6-10.4z" fill="#fbbc04"/><path d="M14.5 4.5a3 3 0 00-5.2 3l6 10.4a3 3 0 105.2-3z" fill="#4285f4"/><circle cx="6.1" cy="16.4" r="3" fill="#34a853"/></svg>'); %>
+</div>
+<div class="flex flex-wrap gap-4 text-sm">
+  <div class="kpi !p-4 !flex-row items-center gap-3"><span>Marketing spend today</span><b class="!text-lg"><%= money(adSpend) %></b></div>
+  <div class="kpi !p-4 !flex-row items-center gap-3"><span>Overall cost per order (ads)</span><b class="!text-lg <%= adOrders ? 'text-green-700' : '!text-neutral-400' %>"><%= adOrders ? money(Math.round(adSpend / adOrders * 100) / 100) : '--' %></b></div>
+</div>
+
+<!-- ═══════════════════ ACCOUNT SUMMARY STRIP ═══════════════════ -->
+<section class="a-card">
+  <div class="flex flex-wrap items-center justify-between gap-3 p-5 pb-4 border-b border-neutral-100">
+    <div>
+      <h2 class="a-h">Account Summary</h2>
+      <p class="text-xs text-neutral-400 mt-0.5">Today's snapshot — <%= new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short' }) %></p>
+    </div>
+    <div class="flex gap-2">
+      <a href="/admin/analytics" class="a-btn-o py-1.5 text-xs">Full Dashboard</a>
+      <a href="/admin/monthly-report" class="a-btn py-1.5 text-xs">Monthly Report</a>
+    </div>
+  </div>
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-x divide-neutral-100">
+    <div class="p-4 text-center">
+      <p class="text-xs text-neutral-500 uppercase tracking-wide mb-1">Orders Placed</p>
+      <p class="text-2xl font-bold text-adm-blue"><%= today.orders || 0 %></p>
+    </div>
+    <div class="p-4 text-center">
+      <p class="text-xs text-neutral-500 uppercase tracking-wide mb-1">Confirmed</p>
+      <p class="text-2xl font-bold text-green-600"><%= todayConfirmed || 0 %></p>
+    </div>
+    <div class="p-4 text-center">
+      <p class="text-xs text-neutral-500 uppercase tracking-wide mb-1">In Transit</p>
+      <p class="text-2xl font-bold"><%= inTransit || 0 %></p>
+    </div>
+    <div class="p-4 text-center">
+      <p class="text-xs text-neutral-500 uppercase tracking-wide mb-1">Delivered (MTD)</p>
+      <p class="text-2xl font-bold text-green-600"><%= mtdDelivered || 0 %></p>
+    </div>
+    <div class="p-4 text-center">
+      <p class="text-xs text-neutral-500 uppercase tracking-wide mb-1">RTO (MTD)</p>
+      <p class="text-2xl font-bold text-red-500"><%= mtdRto || 0 %></p>
+    </div>
+    <div class="p-4 text-center">
+      <p class="text-xs text-neutral-500 uppercase tracking-wide mb-1">Total Sales</p>
+      <p class="text-xl font-bold"><%= money(today.revenue || 0) %></p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ PENDING ITEMS + QUICK ACTIONS ═══════════════════ -->
+<div class="grid lg:grid-cols-2 gap-4">
+
+  <!-- Pending Items -->
+  <section class="a-card p-5">
+    <h2 class="a-h mb-4">Pending Items</h2>
+    <div class="grid grid-cols-2 gap-3">
+      <a href="/admin/catalogue?f=out" class="flex items-center gap-3 p-3 rounded-lg border border-neutral-200 hover:border-adm-blue/40 hover:bg-adm-blue/5 transition-colors">
+        <span class="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </span>
+        <div>
+          <p class="text-xs text-neutral-500">Out-of-stock SKUs</p>
+          <p class="font-bold text-lg text-red-600"><%= outOfStock || 0 %></p>
+        </div>
+      </a>
+      <a href="/admin/inventory?f=low" class="flex items-center gap-3 p-3 rounded-lg border border-neutral-200 hover:border-amber-400/40 hover:bg-amber-50 transition-colors">
+        <span class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 2l3 6.5 7 .9-5.2 4.8 1.4 7L12 17.8 5.8 21.2l1.4-7L2 9.4l7-.9z"/></svg>
+        </span>
+        <div>
+          <p class="text-xs text-neutral-500">Low-stock SKUs</p>
+          <p class="font-bold text-lg text-amber-600"><%= lowStock || 0 %></p>
+        </div>
+      </a>
+      <a href="/admin/orders" class="flex items-center gap-3 p-3 rounded-lg border border-neutral-200 hover:border-adm-blue/40 hover:bg-adm-blue/5 transition-colors">
+        <span class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-adm-blue" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </span>
+        <div>
+          <p class="text-xs text-neutral-500">To dispatch</p>
+          <p class="font-bold text-lg"><%= pending || 0 %></p>
+        </div>
+      </a>
+      <a href="/admin/orders?status=rto" class="flex items-center gap-3 p-3 rounded-lg border border-neutral-200 hover:border-red-300 hover:bg-red-50 transition-colors">
+        <span class="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        </span>
+        <div>
+          <p class="text-xs text-neutral-500">Pending returns/RTO</p>
+          <p class="font-bold text-lg"><%= pendingRto || 0 %></p>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- Quick Actions -->
+  <section class="a-card p-5">
+    <h2 class="a-h mb-4">Quick Actions</h2>
+    <div class="grid grid-cols-2 gap-3">
+      <a href="/admin/orders" class="flex flex-col items-center gap-2 p-4 rounded-xl bg-gradient-to-br from-adm-blue/5 to-adm-blue/10 border border-adm-blue/20 hover:from-adm-blue/10 hover:to-adm-blue/20 transition-colors text-center">
+        <svg class="w-7 h-7 text-adm-blue" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/></svg>
+        <span class="text-sm font-medium text-adm-blue">Process Orders</span>
+      </a>
+      <a href="/admin/catalogue/new" class="flex flex-col items-center gap-2 p-4 rounded-xl bg-gradient-to-br from-green-50 to-green-100/50 border border-green-200 hover:from-green-100 hover:to-green-200/50 transition-colors text-center">
+        <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        <span class="text-sm font-medium text-green-700">Add Product</span>
+      </a>
+      <a href="/admin/monthly-report" class="flex flex-col items-center gap-2 p-4 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 hover:from-purple-100 hover:to-purple-200/50 transition-colors text-center">
+        <svg class="w-7 h-7 text-purple-600" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>
+        <span class="text-sm font-medium text-purple-700">Monthly Report</span>
+      </a>
+      <a href="/admin/reports" class="flex flex-col items-center gap-2 p-4 rounded-xl bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200 hover:from-amber-100 hover:to-amber-200/50 transition-colors text-center">
+        <svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M12 2l3 6.5 7 .9-5.2 4.8 1.4 7L12 17.8 5.8 21.2l1.4-7L2 9.4l7-.9z"/></svg>
+        <span class="text-sm font-medium text-amber-700">Download Reports</span>
+      </a>
+    </div>
+  </section>
+</div>
+
+<!-- ═══════════════════ ORDER TREND CHART ═══════════════════ -->
+<div class="grid lg:grid-cols-2 gap-4">
+  <section class="a-card p-5">
+    <h2 class="a-h mb-1">Order Trend (Last 7 Days)</h2>
+    <p class="text-xs text-neutral-400 mb-4">Daily confirmed vs placed orders</p>
+    <%- include('partials/bars', {
+      labels: last7.map((x) => x.d.slice(8) + '/' + x.d.slice(5,7)),
+      a: last7.map((x) => x.ok),
+      b: last7.map((x) => x.placed),
+      aName: 'Confirmed',
+      bName: 'Placed',
+      money: false
+    }) %>
+  </section>
+
+  <section class="a-card p-5">
+    <h2 class="a-h mb-1">Revenue Trend (Last 7 Days)</h2>
+    <p class="text-xs text-neutral-400 mb-4">Daily confirmed orders revenue</p>
+    <%- include('partials/bars', {
+      labels: last7.map((x) => x.d.slice(8) + '/' + x.d.slice(5,7)),
+      a: last7.map((x) => x.rev),
+      b: last7.map((x) => x.revAll),
+      aName: 'Confirmed Revenue',
+      bName: 'Total Revenue',
+      money: true
+    }) %>
+  </section>
+</div>
+
+<!-- ═══════════════════ WEEKLY TREND TABLE ═══════════════════ -->
+<section class="a-card">
+  <div class="flex flex-wrap items-start justify-between gap-3 p-5">
+    <div>
+      <h2 class="a-h">Trend Report</h2>
+      <p class="text-sm text-neutral-500">Based on order created date. Net profit = sales − courier − ad spend − gateway fees − product cost.</p>
+    </div>
+    <div class="flex flex-wrap gap-2 text-sm">
+      <div class="inline-flex rounded-lg bg-neutral-100 p-1">
+        <% ['all','meta','google'].forEach((p) => { %>
+          <a class="px-3 py-1.5 rounded-md <%= platform === p ? 'bg-white shadow-sm font-medium' : 'text-neutral-600' %>" href="?platform=<%= p %>&period=<%= period %>"><%= p === 'all' ? 'All' : p[0].toUpperCase() + p.slice(1) %></a>
+        <% }) %>
+      </div>
+      <div class="inline-flex rounded-lg bg-neutral-100 p-1">
+        <% ['week','month'].forEach((p) => { %>
+          <a class="px-3 py-1.5 rounded-md <%= period === p ? 'bg-white shadow-sm font-medium' : 'text-neutral-600' %>" href="?platform=<%= platform %>&period=<%= p %>"><%= p === 'week' ? 'Weekly' : 'Monthly' %></a>
+        <% }) %>
+      </div>
+      <a href="/admin/monthly-report" class="a-btn-o py-1.5 text-sm">Full Monthly Report →</a>
+    </div>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="a-table min-w-[760px]">
+      <thead>
+        <tr>
+          <th class="text-left">Metric</th>
+          <% rows.forEach((r) => { %><th><%= r.label %></th><% }) %>
+        </tr>
+      </thead>
+      <tbody>
+        <% const line = (label, fn, cls) => { %>
+        <tr>
+          <td class="font-medium text-neutral-700"><%= label %></td>
+          <% rows.forEach((r) => { %><td class="<%= cls ? cls(r) : '' %>"><%- fn(r) %></td><% }) %>
+        </tr>
+        <% }; %>
+        <% line('Total orders', (r) => r.total); %>
+        <% line('Cancelled', (r) => r.cancelled); %>
+        <% line('RTO %', (r) => { const pct = r.rtoPct; return `<span class="${pct > 30 ? 'text-red-600 font-semibold' : pct > 20 ? 'text-amber-600' : 'text-green-600'}">${pct}%</span>`; }); %>
+        <% line('Delivered', (r) => r.delivered); %>
+        <% line('Total sales', (r) => money(r.sales)); %>
+        <% line('Courier / shipping cost', (r) => '<span class="text-red-500">-' + money(r.courier) + '</span>'); %>
+        <% line('Ad spend', (r) => '<span class="text-red-500">-' + money(r.spend) + '</span>'); %>
+        <% line('Payment gateway fees', (r) => '<span class="text-red-500">-' + money(r.fees) + '</span>'); %>
+        <% line('Net sum [A]', (r) => money(r.net), (r) => r.net < 0 ? 'text-red-600' : 'text-green-700'); %>
+        <% line('Product cost [B]', (r) => '<span class="text-red-500">-' + money(r.prod) + '</span>'); %>
+        <% line('Net profit [A+B]', (r) => money(r.profit), (r) => (r.profit < 0 ? 'text-red-600' : 'text-green-700') + ' font-semibold text-base'); %>
+      </tbody>
+    </table>
+  </div>
+  <div class="p-4 flex justify-end">
+    <a href="/admin/monthly-report" class="text-sm text-adm-blue hover:underline">View full monthly analytics →</a>
+  </div>
+</section>
+
+<!-- ═══════════════════ REPEAT ORDERS + TOP PRODUCTS ═══════════════════ -->
+<div class="grid lg:grid-cols-2 gap-4">
+
+  <!-- Top Products This Month -->
+  <section class="a-card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="a-h">Top Products (MTD)</h2>
+      <a href="/admin/analytics?tab=product" class="text-xs text-adm-blue hover:underline">See all →</a>
+    </div>
+    <% if (topProducts && topProducts.length) { %>
+      <ul class="space-y-3">
+        <% topProducts.slice(0, 6).forEach((p, i) => { %>
+          <li class="flex items-center gap-3">
+            <span class="w-6 h-6 rounded-full bg-adm-blue/10 text-adm-blue text-xs font-bold flex items-center justify-center shrink-0"><%= i+1 %></span>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium truncate"><%= p.name %></p>
+              <div class="h-1.5 bg-neutral-100 rounded mt-1">
+                <div class="h-1.5 bg-adm-blue rounded" style="width: <%= topProducts[0].units ? Math.round(p.units / topProducts[0].units * 100) : 0 %>%"></div>
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <p class="text-sm font-semibold"><%= p.units %> units</p>
+              <p class="text-xs text-neutral-400"><%= money(p.revenue) %></p>
+            </div>
+          </li>
+        <% }) %>
+      </ul>
+    <% } else { %>
+      <p class="text-sm text-neutral-400 py-6 text-center">No sales data for this month yet.</p>
+    <% } %>
+  </section>
+
+  <!-- Payment Mode Breakdown -->
+  <section class="a-card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="a-h">Payment Mode (MTD)</h2>
+      <a href="/admin/analytics?tab=order" class="text-xs text-adm-blue hover:underline">Details →</a>
+    </div>
+    <% if (paymentBreakdown && paymentBreakdown.length) {
+      const colMap = { cod: '#4c5fc7', prepaid: '#22a06b', partial_cod: '#f59e0b' };
+      const totalN = paymentBreakdown.reduce((s, x) => s + x.n, 0) || 1;
+      let acc = 0;
+      const stops = paymentBreakdown.map((x) => { const a = acc; acc += x.n / totalN * 100; return `${colMap[x.m] || '#6b7280'} ${a}% ${acc}%`; }).join(', ');
+    %>
+    <div class="flex items-center gap-6 mb-5">
+      <div class="w-28 h-28 rounded-full shrink-0" style="background: conic-gradient(<%= stops || '#e5e7eb 0 100%' %>); mask: radial-gradient(circle 34px at center, transparent 98%, #000 100%); -webkit-mask: radial-gradient(circle 34px at center, transparent 98%, #000 100%)"></div>
+      <ul class="text-sm space-y-2 flex-1">
+        <% paymentBreakdown.forEach((x) => { %>
+        <li class="flex items-center justify-between">
+          <span class="flex items-center gap-2"><i class="inline-block w-2.5 h-2.5 rounded-full" style="background: <%= colMap[x.m] || '#6b7280' %>"></i><%= x.m.replace(/_/g, ' ').toUpperCase() %></span>
+          <span class="font-semibold"><%= Math.round(x.n / totalN * 100) %>% <span class="text-neutral-400 font-normal">(<%= x.n %>)</span></span>
+        </li>
+        <% }) %>
+      </ul>
+    </div>
+    <div class="border-t pt-3">
+      <% paymentBreakdown.forEach((x) => { %>
+        <div class="flex justify-between text-sm py-1">
+          <span class="text-neutral-600 capitalize"><%= x.m.replace(/_/g, ' ') %></span>
+          <span class="font-medium"><%= money(x.rev) %></span>
+        </div>
+      <% }) %>
+    </div>
+    <% } else { %>
+      <p class="text-sm text-neutral-400 py-6 text-center">No payment data for this month yet.</p>
+    <% } %>
+  </section>
+</div>
+
+<!-- ═══════════════════ CUSTOMER INSIGHTS ═══════════════════ -->
+<div class="grid lg:grid-cols-3 gap-4">
+  <section class="a-card p-5">
+    <h2 class="a-h mb-4">Customer Rating</h2>
+    <div class="text-center py-2">
+      <p class="text-5xl font-bold text-adm-blue mb-2"><%= avgRating > 0 ? avgRating.toFixed(1) : '—' %></p>
+      <div class="flex justify-center gap-1 mb-2">
+        <% for (let i = 1; i <= 5; i++) { %>
+          <svg class="w-5 h-5 <%= i <= Math.round(avgRating || 0) ? 'text-amber-400' : 'text-neutral-200' %>" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3 6.5 7 .9-5.2 4.8 1.4 7L12 17.8 5.8 21.2l1.4-7L2 9.4l7-.9z"/></svg>
+        <% } %>
+      </div>
+      <p class="text-xs text-neutral-400">Based on <%= totalReviews || 0 %> reviews</p>
+    </div>
+    <div class="mt-4 space-y-1.5">
+      <% for (let star = 5; star >= 1; star--) {
+        const count = ratingDist ? (ratingDist[star] || 0) : 0;
+        const pct = totalReviews ? Math.round(count / totalReviews * 100) : 0;
+      %>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="w-3 text-right text-neutral-500"><%= star %></span>
+          <svg class="w-3 h-3 text-amber-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3 6.5 7 .9-5.2 4.8 1.4 7L12 17.8 5.8 21.2l1.4-7L2 9.4l7-.9z"/></svg>
+          <div class="flex-1 h-1.5 bg-neutral-100 rounded"><div class="h-1.5 bg-amber-400 rounded" style="width: <%= pct %>%"></div></div>
+          <span class="w-7 text-right text-neutral-400"><%= count %></span>
+        </div>
+      <% } %>
+    </div>
+    <div class="mt-4 pt-3 border-t">
+      <a href="/admin/website/reviews" class="text-xs text-adm-blue hover:underline">Manage reviews →</a>
+    </div>
+  </section>
+
+  <section class="a-card p-5">
+    <h2 class="a-h mb-4">Customer Summary</h2>
+    <div class="space-y-3">
+      <div class="flex justify-between items-center py-2 border-b border-neutral-100">
+        <span class="text-sm text-neutral-600">Total customers</span>
+        <span class="font-semibold"><%= totalCustomers || 0 %></span>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-neutral-100">
+        <span class="text-sm text-neutral-600">Repeat customers</span>
+        <span class="font-semibold text-green-600"><%= repeatCustomers || 0 %></span>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-neutral-100">
+        <span class="text-sm text-neutral-600">Repeat rate</span>
+        <span class="font-semibold <%= repeatRate > 20 ? 'text-green-600' : 'text-neutral-700' %>"><%= repeatRate || 0 %>%</span>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-neutral-100">
+        <span class="text-sm text-neutral-600">Avg orders / customer</span>
+        <span class="font-semibold"><%= avgOrdersPerCustomer || '—' %></span>
+      </div>
+      <div class="flex justify-between items-center py-2">
+        <span class="text-sm text-neutral-600">Avg order value</span>
+        <span class="font-semibold text-adm-blue"><%= money(aovMonth || 0) %></span>
+      </div>
+    </div>
+    <div class="mt-4 pt-3 border-t">
+      <a href="/admin/customers" class="text-xs text-adm-blue hover:underline">View all customers →</a>
+    </div>
+  </section>
+
+  <section class="a-card p-5">
+    <h2 class="a-h mb-4">State-wise Orders (MTD)</h2>
+    <% if (stateWise && stateWise.length) {
+      const stateMax = Math.max(1, ...stateWise.map((x) => x.n));
+    %>
+      <ul class="space-y-2 text-sm">
+        <% stateWise.slice(0, 7).forEach((x) => { %>
+          <li>
+            <div class="flex justify-between mb-1">
+              <span class="text-neutral-700"><%= x.state || 'Unknown' %></span>
+              <b><%= x.n %></b>
+            </div>
+            <div class="h-1.5 bg-neutral-100 rounded">
+              <div class="h-1.5 bg-adm-blue rounded" style="width: <%= Math.round(x.n / stateMax * 100) %>%"></div>
+            </div>
+          </li>
+        <% }) %>
+      </ul>
+    <% } else { %>
+      <p class="text-sm text-neutral-400 py-6 text-center">No order data for this month yet.</p>
+    <% } %>
+    <div class="mt-4 pt-3 border-t">
+      <a href="/admin/analytics?tab=order" class="text-xs text-adm-blue hover:underline">Full analytics →</a>
+    </div>
+  </section>
+</div>
+
+<%- include('partials/bottom') %>

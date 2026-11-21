@@ -1,0 +1,48 @@
+<%- include('partials/top') %>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+  <div class="kpi"><b><%= avg %>/100</b><span>Average SEO score</span></div>
+  <div class="kpi"><b><%= rows.filter((x) => x.score < 60).length %></b><span>Products needing work</span></div>
+  <div class="kpi"><b><%= perf.organic %></b><span>Organic search visitors</span></div>
+  <div class="kpi"><a href="/sitemap.xml" target="_blank"><b class="!text-lg">sitemap.xml</b><span>Auto-generated &middot; robots.txt live</span></a></div>
+</div>
+<div class="a-card"><nav class="flex gap-1 px-3 border-b border-neutral-200"><% [['products','Products'],['categories','Categories'],['performance','Performance & opportunities']].forEach(([k, l]) => { %><a class="a-tab <%= tab === k ? 'a-tab-on' : '' %>" href="?tab=<%= k %>"><%= l %></a><% }) %></nav></div>
+
+<% if (tab === 'products') { %>
+<section class="a-card divide-y">
+  <p class="p-4 text-sm text-neutral-600">Worst-scoring products first. Edit title, description, keywords, URL and image alt text inline.</p>
+  <% rows.slice(0, 40).forEach((x) => { const p = x.p; %>
+  <form method="post" action="/admin/marketing/seo/product/<%= p.id %>" class="p-4 grid lg:grid-cols-12 gap-3 items-start"><input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="lg:col-span-3"><b class="block"><%= p.name %></b><span class="pill <%= x.score >= 80 ? 'pill-green' : x.score >= 60 ? 'pill-amber' : 'pill-red' %>"><%= x.score %>/100</span>
+      <ul class="mt-2 text-xs text-neutral-600 list-disc pl-4 space-y-0.5"><% x.issues.slice(0, 4).forEach((i) => { %><li><%= i[0] %></li><% }) %></ul></div>
+    <div class="lg:col-span-8 grid md:grid-cols-2 gap-2">
+      <div><label class="a-lbl">SEO title (<%= (p.seoTitle || '').length %>/60)</label><input class="a-in" name="seo_title" value="<%= p.seoTitle || '' %>"></div>
+      <div><label class="a-lbl">URL: /products/</label><input class="a-in" name="slug" value="<%= p.slug %>"></div>
+      <div class="md:col-span-2"><label class="a-lbl">Meta description (<%= (p.seoDesc || '').length %>/160)</label><textarea class="a-in" name="seo_desc" rows="2"><%= p.seoDesc || '' %></textarea></div>
+      <div><label class="a-lbl">Keywords</label><input class="a-in" name="seo_keywords" value="<%= p.seoKeywords || '' %>"></div>
+      <div><label class="a-lbl">Image alt text</label><input class="a-in" name="image_alt" value="<%= p.imageAlt %>"></div>
+    </div>
+    <div class="lg:col-span-1"><button class="a-btn w-full">Save</button></div>
+  </form>
+  <% }) %>
+</section>
+<% } %>
+
+<% if (tab === 'categories') { %>
+<section class="a-card divide-y"><% cats.forEach((c) => { %>
+  <form method="post" action="/admin/marketing/seo/category/<%= c.slug %>" class="p-4 grid lg:grid-cols-12 gap-3 items-start"><input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="lg:col-span-2"><b><%= c.name %></b><p class="text-xs text-neutral-500">/collections/<%= c.slug %></p></div>
+    <div class="lg:col-span-9 grid md:grid-cols-2 gap-2"><div><label class="a-lbl">SEO title</label><input class="a-in" name="seo_title" value="<%= c.seoTitle || '' %>"></div><div><label class="a-lbl">Keywords</label><input class="a-in" name="seo_keywords" value="<%= c.seoKeywords || '' %>"></div><div class="md:col-span-2"><label class="a-lbl">Meta description</label><textarea class="a-in" name="seo_desc" rows="2"><%= c.seoDesc || '' %></textarea></div></div>
+    <div class="lg:col-span-1"><button class="a-btn w-full">Save</button></div></form><% }) %></section>
+<% } %>
+
+<% if (tab === 'performance') { %>
+<div class="a-card p-4"><%- include('partials/range', { r, hidden: { tab: 'performance' } }) %></div>
+<section class="a-card p-5"><h2 class="a-h mb-3">Optimization opportunities</h2><ul class="space-y-2 text-sm list-disc pl-5"><% opps.forEach((o) => { %><li><%= o %></li><% }) %><% if (!opps.length) { %><li class="list-none text-neutral-500 -ml-5">Nothing urgent. Nice work.</li><% } %></ul></section>
+<div class="grid lg:grid-cols-3 gap-4">
+  <section class="a-card overflow-x-auto"><h2 class="a-h p-5 pb-3">Top landing pages</h2><table class="a-table"><thead><tr><th>Page</th><th>Views</th><th>Visitors</th></tr></thead><tbody><% perf.landing.forEach((x) => { %><tr><td class="text-xs"><%= x.path %></td><td><%= x.views %></td><td><%= x.visitors %></td></tr><% }) %></tbody></table></section>
+  <section class="a-card overflow-x-auto"><h2 class="a-h p-5 pb-3">Traffic sources</h2><table class="a-table"><thead><tr><th>Source</th><th>Visitors</th></tr></thead><tbody><% perf.sources.forEach((x) => { %><tr><td><%= x.source %></td><td><%= x.visitors %></td></tr><% }) %></tbody></table></section>
+  <section class="a-card overflow-x-auto"><h2 class="a-h p-5 pb-3">On-site searches</h2><table class="a-table"><thead><tr><th>Term</th><th>Searches</th><th>Results</th></tr></thead><tbody><% perf.searches.forEach((x) => { %><tr><td><%= x.term %></td><td><%= x.n %></td><td class="<%= x.results ? '' : 'text-red-600 font-medium' %>"><%= x.results %></td></tr><% }) %></tbody></table></section>
+</div>
+<p class="text-sm text-neutral-500">Rankings and impressions from Google need Google Search Console. Add your site there and submit the sitemap above; this panel shows on-site traffic, sources and search behaviour.</p>
+<% } %>
+<%- include('partials/bottom') %>

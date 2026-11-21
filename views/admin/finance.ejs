@@ -1,0 +1,19 @@
+<%- include('partials/top') %>
+<div class="grid md:grid-cols-3 gap-4">
+  <section class="a-card p-5"><h2 class="a-h">Outstanding COD</h2><p class="text-xs text-neutral-500 mb-3">Delivered, cash not yet settled to you</p>
+    <p class="text-sm">Delivered orders <b class="float-right"><%= unsettled.n || 0 %></b></p><p class="text-sm mt-1">COD collected by courier <b class="float-right text-green-700"><%= money(unsettled.amt) %></b></p><p class="text-sm mt-1">Courier expenses <b class="float-right text-red-600">-<%= money(unsettled.exp) %></b></p>
+    <p class="border-t mt-3 pt-3 text-sm">Transferable <b class="float-right text-lg"><%= money((unsettled.amt || 0) - (unsettled.exp || 0)) %></b></p>
+    <form method="post" action="/admin/finance/settlements" class="mt-4 flex gap-2" data-confirm="Create a settlement for all unsettled delivered COD orders up to this date?"><input type="hidden" name="_csrf" value="<%= csrf %>"><input class="a-in" type="date" name="upto" aria-label="Settle up to" value="<%= new Date().toISOString().slice(0,10) %>"><button class="a-btn whitespace-nowrap" <%= unsettled.n ? '' : 'disabled' %>>Create settlement</button></form></section>
+  <section class="a-card p-5"><h2 class="a-h">Pending &amp; in transit</h2><p class="text-xs text-neutral-500 mb-3">Cash you will receive</p>
+    <p class="text-sm">COD orders in transit <b class="float-right"><%= transit.n || 0 %></b></p><p class="text-sm mt-1">Expected COD value <b class="float-right"><%= money(transit.amt) %></b></p>
+    <p class="text-sm mt-3">Settlements awaiting payout <b class="float-right"><%= pendingSet.n || 0 %></b></p><p class="text-sm mt-1">Pending payout amount <b class="float-right text-amber-600"><%= money(pendingSet.amt) %></b></p></section>
+  <section class="a-card p-5"><h2 class="a-h">Received &amp; paid out</h2><p class="text-xs text-neutral-500 mb-3">All time</p>
+    <p class="text-sm">Prepaid / advance payments <b class="float-right text-green-700"><%= money(prepaid.amt) %></b></p><p class="text-sm mt-1">Settlements paid <b class="float-right"><%= money(settled.amt) %></b></p><p class="text-sm mt-1">Refunds issued <b class="float-right text-red-600">-<%= money(refunds.amt) %></b></p>
+    <p class="text-sm mt-1">Shipping charged / courier cost <b class="float-right"><%= money(ship.charged) %> / <%= money(ship.cost) %></b></p></section>
+</div>
+<section class="a-card overflow-x-auto"><div class="flex items-center justify-between p-5 pb-3"><h2 class="a-h">Settlement history</h2><a class="a-btn-o" href="/admin/finance/orders?format=csv">Download order finance CSV</a></div>
+  <table class="a-table min-w-[820px]"><thead><tr><th>Reference</th><th>Cycle</th><th>Orders</th><th>COD amount</th><th>Expenses</th><th>Net</th><th>Status</th><th></th></tr></thead><tbody>
+  <% history.forEach((s) => { %><tr><td><a class="text-adm-blue hover:underline" href="/admin/finance/orders?settlement=<%= s.id %>&from=2020-01-01"><%= s.reference %></a></td><td><%= s.cycle_start %> to <%= s.cycle_end %></td><td><%= s.order_count %></td><td><%= money(s.cod_amount) %></td><td class="text-red-600">-<%= money(s.expenses) %></td><td><b><%= money(s.net_amount) %></b></td><td><%- pill(s.status) %><% if (s.paid_on) { %><br><span class="text-xs text-neutral-500"><%= s.paid_on %></span><% } %></td>
+    <td><% if (s.status === 'pending') { %><form method="post" action="/admin/finance/settlements/<%= s.id %>/paid" class="flex gap-1"><input type="hidden" name="_csrf" value="<%= csrf %>"><input class="a-in !w-36" type="date" name="paid_on" aria-label="Paid on"><button class="a-btn-o">Mark paid</button></form><% } %></td></tr><% }) %>
+  <% if (!history.length) { %><tr><td colspan="8" class="text-center text-neutral-500 py-8">No settlements yet. Create one once COD orders are delivered.</td></tr><% } %></tbody></table></section>
+<%- include('partials/bottom') %>

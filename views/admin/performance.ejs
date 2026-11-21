@@ -1,0 +1,33 @@
+<%- include('partials/top') %>
+<div class="a-card p-4"><%- include('partials/range', { r, hidden: {} }) %></div>
+<div class="grid grid-cols-2 lg:grid-cols-6 gap-3">
+  <% [['Ad spend', money(total.spend)], ['Attributed orders', total.orders], ['Attributed revenue', money(total.revenue)], ['ROAS', total.roas + 'x'], ['Cost per acquisition', money(total.cpa)], ['Clicks / impressions', total.clicks + ' / ' + total.imp]].forEach(([l, v]) => { %><div class="kpi"><b class="!text-xl"><%= v %></b><span><%= l %></span></div><% }) %>
+</div>
+<section class="a-card overflow-x-auto"><h2 class="a-h p-5 pb-1">Campaign-wise performance</h2><p class="px-5 pb-3 text-xs text-neutral-500">Orders and revenue are attributed from the <code>utm_campaign</code> on your ad links (real store data). Spend, impressions and clicks come from the daily numbers you enter or import.</p>
+  <table class="a-table min-w-[960px]"><thead><tr><th>Campaign</th><th>Platform</th><th>UTM tag</th><th>Spend</th><th>Impr.</th><th>Clicks</th><th>CTR</th><th>CPC</th><th>Orders</th><th>Revenue</th><th>CPA</th><th>ROAS</th><th></th></tr></thead><tbody>
+  <% list.forEach((c) => { %><tr><td><b><%= c.name %></b><br><%- pill(c.status) %> <% if (c.product_slug) { %><span class="text-xs text-neutral-500"><%= c.product_slug %></span><% } %></td><td><%= c.platform %></td><td class="text-xs"><%= c.utm_campaign %></td><td><%= money(c.spend) %></td><td><%= c.imp %></td><td><%= c.clicks %></td><td><%= c.ctr %>%</td><td><%= money(c.cpc) %></td><td><%= c.orders %></td><td><%= money(c.revenue) %></td><td><%= c.orders ? money(c.cpa) : '-' %></td><td><b class="<%= c.roas >= 2 ? 'text-green-700' : c.spend ? 'text-red-600' : '' %>"><%= c.spend ? c.roas + 'x' : '-' %></b></td>
+    <td><form method="post" action="/admin/marketing/campaigns/<%= c.id %>/delete" data-confirm="Delete this campaign and its metrics?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-r !py-1">Delete</button></form></td></tr><% }) %>
+  <% if (!list.length) { %><tr><td colspan="13" class="text-center py-8 text-neutral-500">No campaigns yet. Create one below.</td></tr><% } %></tbody></table></section>
+<div class="grid lg:grid-cols-2 gap-4">
+  <section class="a-card overflow-x-auto"><h2 class="a-h p-5 pb-3">Product-wise performance (from ad-attributed orders)</h2><table class="a-table"><thead><tr><th>Product</th><th>Units</th><th>Revenue</th><th>Allocated spend</th><th>ROAS</th></tr></thead><tbody><% productWise.forEach((p) => { %><tr><td><%= p.name %></td><td><%= p.units %></td><td><%= money(p.revenue) %></td><td><%= p.spend ? money(p.spend) : '-' %></td><td><%= p.roas ? p.roas + 'x' : '-' %></td></tr><% }) %><% if (!productWise.length) { %><tr><td colspan="5" class="text-neutral-500 text-center py-6">No attributed orders yet.</td></tr><% } %></tbody></table></section>
+  <section class="a-card p-5"><h2 class="a-h mb-3">Daily spend</h2><%- include('partials/bars', { labels: daily.map((x) => x.day.slice(8) + '/' + x.day.slice(5, 7)), a: daily.map((x) => x.spend), b: daily.map((x) => x.clicks), aName: 'Spend (INR)', bName: 'Clicks', money: false }) %></section>
+</div>
+<div class="grid lg:grid-cols-3 gap-4">
+  <section class="a-card p-5"><h2 class="a-h mb-3">New campaign</h2>
+    <form method="post" action="/admin/marketing/campaigns/save" class="space-y-3"><input type="hidden" name="_csrf" value="<%= csrf %>">
+      <div><label class="a-lbl">Name</label><input class="a-in" name="name" required></div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="a-lbl">Platform</label><select class="a-in" name="platform"><option>Meta</option><option>Google</option><option>YouTube</option><option>Other</option></select></div><div><label class="a-lbl">Objective</label><input class="a-in" name="objective" placeholder="e.g. Sales"></div></div>
+      <div><label class="a-lbl">UTM campaign tag</label><input class="a-in" name="utm_campaign" placeholder="auto from name"><p class="text-xs text-neutral-500 mt-1">Add <code>?utm_campaign=tag</code> to the ad's destination URL.</p></div>
+      <div><label class="a-lbl">Product (optional)</label><select class="a-in" name="product_slug"><option value="">All products</option><% products.forEach((p) => { %><option value="<%= p.slug %>"><%= p.name %></option><% }) %></select></div>
+      <button class="a-btn w-full">Create campaign</button></form></section>
+  <section class="a-card p-5"><h2 class="a-h mb-3">Add daily metrics</h2>
+    <form method="post" action="/admin/marketing/metrics" class="space-y-3"><input type="hidden" name="_csrf" value="<%= csrf %>">
+      <div class="grid grid-cols-2 gap-3"><div><label class="a-lbl">Campaign</label><select class="a-in" name="campaign_id"><% list.forEach((c) => { %><option value="<%= c.id %>"><%= c.name %></option><% }) %></select></div><div><label class="a-lbl">Date</label><input class="a-in" type="date" name="day" value="<%= today %>"></div></div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="a-lbl">Spend (INR)</label><input class="a-in" type="number" step="0.01" name="spend"></div><div><label class="a-lbl">Impressions</label><input class="a-in" type="number" name="impressions"></div><div><label class="a-lbl">Clicks</label><input class="a-in" type="number" name="clicks"></div><div><label class="a-lbl">Platform conversions</label><input class="a-in" type="number" name="conversions"></div></div>
+      <button class="a-btn w-full">Save (overwrites that day)</button></form></section>
+  <section class="a-card p-5"><h2 class="a-h mb-3">Import from Ads Manager</h2>
+    <form method="post" action="/admin/marketing/metrics/import" class="space-y-3"><input type="hidden" name="_csrf" value="<%= csrf %>">
+      <label class="a-lbl" for="csv">One row per line: date,utm_campaign,spend,impressions,clicks,conversions</label>
+      <textarea class="a-in font-mono text-xs" id="csv" name="csv" rows="6" placeholder="e.g. 2026-10-27,spring_sale,1250.50,42000,610,9"></textarea><button class="a-btn w-full">Import rows</button></form></section>
+</div>
+<%- include('partials/bottom') %>

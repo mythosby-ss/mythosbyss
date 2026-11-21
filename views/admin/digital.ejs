@@ -1,0 +1,35 @@
+<%- include('partials/top') %>
+<div class="grid xl:grid-cols-3 gap-6">
+  <section class="a-card xl:col-span-2"><h2 class="a-h p-5 pb-3">Promotional banners (home page carousel)</h2>
+    <div class="divide-y"><% banners.forEach((b) => { %><div class="p-4 flex gap-4 items-center flex-wrap"><% if (b.image) { %><img src="<%= imgUrl(b.image) %>" class="w-24 h-16 object-cover rounded bg-neutral-100" alt=""><% } else { %><span class="w-24 h-16 rounded flex items-center justify-center text-xs text-white <%= b.theme === 'ink' ? 'bg-neutral-800' : b.theme === 'gold' ? 'bg-gold' : 'bg-lilac' %>"><%= b.theme %></span><% } %>
+      <div class="flex-1 min-w-[200px]"><b><%= b.title %></b> <%- b.active ? pill('Active', 'green') : pill('Off', 'gray') %><p class="text-xs text-neutral-500"><%= b.subtitle %></p><p class="text-xs text-neutral-500">Link: <%= b.link %> &middot; <%= b.starts_on || 'any time' %> to <%= b.ends_on || 'no end' %></p></div>
+      <div class="flex gap-2"><a class="a-btn-o !py-1" href="?banner=<%= b.id %>">Edit</a><form method="post" action="/admin/marketing/banners/<%= b.id %>/toggle"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-o !py-1"><%= b.active ? 'Turn off' : 'Turn on' %></button></form><form method="post" action="/admin/marketing/banners/<%= b.id %>/delete" data-confirm="Delete banner?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-r !py-1">Delete</button></form></div></div><% }) %></div></section>
+  <section class="a-card p-5"><h2 class="a-h mb-3"><%= editB ? 'Edit banner' : 'Add banner' %></h2>
+    <form method="post" action="/admin/marketing/banners/save" enctype="multipart/form-data" class="space-y-3"><input type="hidden" name="_csrf" value="<%= csrf %>"><% if (editB) { %><input type="hidden" name="id" value="<%= editB.id %>"><input type="hidden" name="keep_image" value="<%= editB.image || '' %>"><% } %>
+      <div><label class="a-lbl">Headline</label><input class="a-in" name="title" required value="<%= editB ? editB.title : '' %>"></div>
+      <div><label class="a-lbl">Sub-text</label><input class="a-in" name="subtitle" value="<%= editB ? editB.subtitle : '' %>"></div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="a-lbl">Button text</label><input class="a-in" name="cta_text" value="<%= editB ? editB.cta_text : 'Shop now' %>"></div><div><label class="a-lbl">Link</label><input class="a-in" name="link" value="<%= editB ? editB.link : '/products' %>"></div></div>
+      <div class="grid grid-cols-3 gap-3"><div><label class="a-lbl">Theme</label><select class="a-in" name="theme"><% ['lilac','gold','ink'].forEach((t) => { %><option <%= editB && editB.theme === t ? 'selected' : '' %>><%= t %></option><% }) %></select></div><div><label class="a-lbl">Starts</label><input class="a-in" type="date" name="starts_on" value="<%= editB && editB.starts_on ? editB.starts_on : '' %>"></div><div><label class="a-lbl">Ends</label><input class="a-in" type="date" name="ends_on" value="<%= editB && editB.ends_on ? editB.ends_on : '' %>"></div></div>
+      <div><label class="a-lbl">Image (optional)</label><input class="a-in" type="file" name="file" accept="image/jpeg,image/png,image/webp"><input class="a-in mt-2" name="link_image" placeholder="...or Drive link / https URL"></div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="a-lbl">Order</label><input class="a-in" type="number" name="sort" value="<%= editB ? editB.sort : 0 %>"></div><label class="flex items-center gap-2 pt-6 text-sm"><input type="checkbox" name="active" value="1" <%= !editB || editB.active ? 'checked' : '' %>> Active</label></div>
+      <button class="a-btn w-full">Save banner</button><% if (editB) { %><a class="a-btn-o w-full" href="/admin/marketing/digital">Cancel</a><% } %></form></section>
+</div>
+
+<div class="grid xl:grid-cols-3 gap-6">
+  <section class="a-card xl:col-span-2 overflow-x-auto"><h2 class="a-h p-5 pb-3">Offers &amp; promotional activity</h2>
+    <table class="a-table min-w-[760px]"><thead><tr><th>Promotion</th><th>Channel</th><th>Coupon</th><th>Dates</th><th>Status</th><th>Tracking link</th><th></th></tr></thead><tbody>
+      <% promos.forEach((p) => { %><tr><td><b><%= p.name %></b><p class="text-xs text-neutral-500 max-w-[260px]"><%= p.content %></p></td><td><%= p.channel %></td><td><%= p.coupon_code || '-' %></td><td class="text-xs"><%= p.starts_on || '-' %><br><%= p.ends_on || '' %></td><td><%- pill(p.status, p.status === 'live' ? 'green' : p.status === 'ended' ? 'gray' : 'blue') %></td><td><button type="button" class="a-btn-o !py-1" data-copy="<%= p.link %>">Copy link</button></td>
+        <td><form method="post" action="/admin/marketing/promotions/<%= p.id %>/delete" data-confirm="Delete this promotion?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-r !py-1">Delete</button></form></td></tr><% }) %>
+      <% if (!promos.length) { %><tr><td colspan="7" class="text-center py-8 text-neutral-500">Plan offers across Instagram, Facebook, WhatsApp, Google or email. Each gets a UTM tracking link.</td></tr><% } %></tbody></table></section>
+  <section class="a-card p-5"><h2 class="a-h mb-3">Plan a promotion</h2>
+    <form method="post" action="/admin/marketing/promotions/save" class="space-y-3"><input type="hidden" name="_csrf" value="<%= csrf %>">
+      <div><label class="a-lbl">Name</label><input class="a-in" name="name" required placeholder="e.g. Diwali kitchen sale"></div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="a-lbl">Channel</label><select class="a-in" name="channel"><% ['Instagram','Facebook','WhatsApp','Google','YouTube','Email','SMS','Other'].forEach((c) => { %><option><%= c %></option><% }) %></select></div><div><label class="a-lbl">Coupon</label><select class="a-in" name="coupon_code"><option value="">None</option><% coupons.forEach((c) => { %><option><%= c.code %></option><% }) %></select></div></div>
+      <div><label class="a-lbl">Landing page</label><input class="a-in" name="landing" value="/products" placeholder="e.g. /collections/water-bottle"></div>
+      <div><label class="a-lbl">Content / caption</label><textarea class="a-in" name="content" rows="3"></textarea></div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="a-lbl">Starts</label><input class="a-in" type="date" name="starts_on"></div><div><label class="a-lbl">Ends</label><input class="a-in" type="date" name="ends_on"></div></div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="a-lbl">utm_medium</label><input class="a-in" name="utm_medium" value="social"></div><div><label class="a-lbl">Status</label><select class="a-in" name="status"><option>planned</option><option>live</option><option>ended</option></select></div></div>
+      <button class="a-btn w-full">Save promotion</button></form></section>
+</div>
+<p class="text-sm text-neutral-500">The announcement bar text and store-wide settings are under <a class="text-adm-blue" href="/admin/settings">Settings</a>.</p>
+<%- include('partials/bottom') %>

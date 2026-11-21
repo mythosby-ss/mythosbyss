@@ -1,0 +1,12 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Admin login | MythosBySS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/css/styles.css"></head>
+<body class="bg-adm-side min-h-screen flex items-center justify-center p-4">
+<form method="post" action="/admin/login" class="bg-white rounded-2xl p-8 w-full max-w-sm space-y-4">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <div class="flex items-center gap-3"><span class="w-10 h-10 rounded-lg bg-adm-blue text-white flex items-center justify-center font-display text-xl">M</span><div><p class="font-semibold">MythosBySS Admin</p><p class="text-xs text-neutral-500">Sign in to manage your store</p></div></div>
+  <% if (!configured) { %><p class="text-sm bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3">Set ADMIN_USER and ADMIN_PASS in your .env file, then restart.</p><% } %>
+  <% if (error) { %><p role="alert" class="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3"><%= error %></p><% } %>
+  <div><label class="a-lbl" for="user">Username</label><input class="a-in" id="user" name="user" autocomplete="username" required></div>
+  <div><label class="a-lbl" for="pass">Password</label><input class="a-in" id="pass" name="pass" type="password" autocomplete="current-password" required></div>
+  <button class="a-btn w-full py-3">Sign in</button>
+</form></body></html>

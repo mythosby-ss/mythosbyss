@@ -1,0 +1,23 @@
+<%- include('partials/top') %>
+<div class="grid xl:grid-cols-3 gap-6">
+  <section class="a-card xl:col-span-2">
+    <div class="p-5 pb-3 flex flex-wrap items-center justify-between gap-3"><h2 class="a-h">UGC video testimonials</h2>
+      <form method="post" action="/admin/website/testimonials/import" class="flex gap-2"><input type="hidden" name="_csrf" value="<%= csrf %>"><input class="a-in !w-72" name="folder" placeholder="Drive folder link with UGC videos" aria-label="UGC Drive folder"><button class="a-btn-o" <%= driveOn ? '' : 'disabled' %>>Import videos</button></form></div>
+    <div class="grid sm:grid-cols-2 gap-4 p-5 pt-2">
+      <% list.forEach((t) => { %><article class="border rounded-xl overflow-hidden"><img src="<%= t.thumbUrl %>" alt="" class="w-full aspect-video object-cover bg-neutral-100">
+        <div class="p-3 text-sm"><div class="flex justify-between gap-2"><b><%= t.customer_name || 'Untitled' %></b> <%- t.active ? pill('Live', 'green') : pill('Draft', 'gray') %></div><p class="text-neutral-600 mt-1"><%= t.quote || 'No quote yet' %></p><p class="text-xs text-neutral-500 mt-1"><%= t.product_slug || 'No product linked' %></p>
+        <div class="flex gap-2 mt-3"><a class="a-btn-o !py-1" href="?edit=<%= t.id %>">Edit</a><form method="post" action="/admin/website/testimonials/<%= t.id %>/toggle"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-o !py-1"><%= t.active ? 'Hide' : 'Publish' %></button></form><form method="post" action="/admin/website/testimonials/<%= t.id %>/delete" data-confirm="Delete this testimonial?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-r !py-1">Delete</button></form></div></div></article><% }) %>
+      <% if (!list.length) { %><p class="text-neutral-500 sm:col-span-2 py-8 text-center">No testimonials yet. Add a video from Google Drive on the right.</p><% } %>
+    </div></section>
+  <section class="a-card p-5"><h2 class="a-h mb-3"><%= edit ? 'Edit testimonial' : 'Add testimonial' %></h2>
+    <form method="post" action="/admin/website/testimonials/save" enctype="multipart/form-data" class="space-y-3"><input type="hidden" name="_csrf" value="<%= csrf %>"><% if (edit) { %><input type="hidden" name="id" value="<%= edit.id %>"><input type="hidden" name="keep_thumb" value="<%= edit.thumb || '' %>"><% } %>
+      <div><label class="a-lbl">Drive video link or file ID *</label><input class="a-in" name="video" required value="<%= edit ? edit.video : '' %>" placeholder="https://drive.google.com/file/d/.../view"><p class="text-xs text-neutral-500 mt-1">Share the file as "Anyone with the link can view".</p></div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="a-lbl">Customer name</label><input class="a-in" name="customer_name" value="<%= edit ? edit.customer_name : '' %>"></div><div><label class="a-lbl">City</label><input class="a-in" name="city" value="<%= edit && edit.city ? edit.city : '' %>"></div></div>
+      <div><label class="a-lbl">What they said</label><textarea class="a-in" name="quote" rows="3"><%= edit ? edit.quote : '' %></textarea></div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="a-lbl">Rating</label><select class="a-in" name="rating"><% [5,4,3].forEach((n) => { %><option <%= edit && edit.rating === n ? 'selected' : '' %>><%= n %></option><% }) %></select></div><div><label class="a-lbl">Order</label><input class="a-in" type="number" name="sort" value="<%= edit ? edit.sort : 0 %>"></div></div>
+      <div><label class="a-lbl">Product shown with it</label><select class="a-in" name="product_slug"><option value="">None (home page only)</option><% products.forEach((p) => { %><option value="<%= p.slug %>" <%= edit && edit.product_slug === p.slug ? 'selected' : '' %>><%= p.name %></option><% }) %></select></div>
+      <div><label class="a-lbl">Thumbnail (optional - defaults to the video frame)</label><input class="a-in" type="file" name="file" accept="image/jpeg,image/png,image/webp"><input class="a-in mt-2" name="thumb_link" placeholder="...or Drive link / https URL"></div>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="active" value="1" <%= !edit || edit.active ? 'checked' : '' %>> Show on website</label>
+      <button class="a-btn w-full">Save testimonial</button><% if (edit) { %><a class="a-btn-o w-full" href="/admin/website/testimonials">Cancel</a><% } %></form></section>
+</div>
+<%- include('partials/bottom') %>

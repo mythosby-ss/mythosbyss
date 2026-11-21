@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow"><meta name="csrf-token" content="<%= csrf %>">
+  <title><%= title %> | MythosBySS Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="bg-adm-bg text-[#1b1c1f] min-h-screen">
+<% const isAll = adminQuery.tab === 'all';
+   const on = (href) => { const base = href.split('?')[0]; const wantAll = href.includes('tab=all');
+     if (base === '/admin') return adminPath === '/admin';
+     if (base === '/admin/orders') { if (!(adminPath === base || adminPath.startsWith(base + '/'))) return false; return wantAll ? (isAll || adminPath !== base) : !isAll; }
+     return adminPath === base || adminPath.startsWith(base + '/'); }; %>
+<div class="flex min-h-screen">
+  <aside id="adm-side" class="hidden lg:flex flex-col w-64 shrink-0 bg-adm-side text-neutral-300 fixed inset-y-0 z-40 overflow-y-auto lg:static">
+    <div class="flex items-center gap-3 px-5 py-5 text-white"><span class="w-8 h-8 rounded-lg bg-adm-blue/90 flex items-center justify-center font-display text-lg">M</span><span class="font-semibold">MythosBySS</span></div>
+    <nav class="px-3 pb-8 space-y-1 text-sm" aria-label="Admin">
+      <% nav.forEach((g) => { const kids = g.children || []; const open = g.href ? on(g.href) : kids.some((c) => on(c[1])); %>
+        <% if (!kids.length) { %>
+          <a href="<%= g.href %>" class="flex items-center gap-3 px-3 py-2.5 rounded-lg <%= open ? 'bg-gradient-to-r from-adm-blue2 to-adm-blue text-white' : 'hover:bg-white/5' %>">
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="<%= g.icon %>"/></svg><%= g.label %></a>
+        <% } else { %>
+          <details <%= open ? 'open' : '' %> class="group">
+            <summary class="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer list-none hover:bg-white/5 <%= open ? 'text-white' : '' %>">
+              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="<%= g.icon %>"/></svg>
+              <span class="flex-1"><%= g.label %></span>
+              <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <div class="ml-5 pl-4 border-l border-white/10 mt-1 space-y-0.5">
+              <% kids.forEach((c) => { const here = on(c[1]) && !kids.some((k) => k !== c && k[1].length > c[1].length && k[1].startsWith(c[1].split('?')[0]) && on(k[1])); %>
+                <a href="<%= c[1] %>" class="block px-3 py-2 rounded-md <%= here ? 'text-white bg-white/10' : 'hover:text-white' %>"><%= c[0] %></a>
+              <% }) %>
+            </div>
+          </details>
+        <% } %>
+      <% }) %>
+    </nav>
+  </aside>
+  <div class="flex-1 min-w-0 flex flex-col">
+    <header class="bg-white border-b border-neutral-200 h-16 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30">
+      <div class="flex items-center gap-3">
+        <button type="button" data-adm-menu class="lg:hidden p-2 -ml-2" aria-label="Menu"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <h1 class="text-lg font-semibold font-sans"><%= title %></h1>
+      </div>
+      <div class="flex items-center gap-3 text-sm">
+        <% if (alerts.toShip) { %><a href="/admin/orders" class="hidden sm:inline pill pill-blue"><%= alerts.toShip %> to ship</a><% } %>
+        <% if (alerts.lowStock) { %><a href="/admin/inventory?f=low" class="hidden sm:inline pill pill-amber"><%= alerts.lowStock %> low stock</a><% } %>
+        <a href="/" target="_blank" rel="noopener" class="a-btn-o py-1.5">View store</a>
+        <form method="post" action="/admin/logout"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-o py-1.5">Log out</button></form>
+      </div>
+    </header>
+    <main class="p-4 sm:p-6 space-y-6">
+      <% if (flash) { %><div role="status" class="rounded-lg px-4 py-3 text-sm <%= flash.type === 'err' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-800 border border-green-200' %>"><%= flash.msg %></div><% } %>

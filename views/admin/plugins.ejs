@@ -1,0 +1,236 @@
+<%- include('partials/top') %>
+
+
+<!-- Hero Banner -->
+<div class="rounded-2xl overflow-hidden relative bg-gradient-to-br from-adm-side via-[#1e2a4a] to-adm-blue min-h-[140px] flex items-center px-8 py-6">
+  <div class="relative z-10">
+    <h2 class="text-2xl font-bold text-white mb-1">Supercharge your store with Integrations</h2>
+    <p class="text-blue-200 text-sm max-w-xl">Connect your logistics, communication, storage, and advertising platforms. All credentials are stored securely in your <code class="bg-white/10 px-1.5 py-0.5 rounded text-xs">.env</code> file.</p>
+  </div>
+  <!-- decorative icons -->
+  <div class="absolute right-8 top-1/2 -translate-y-1/2 hidden lg:flex gap-3 opacity-20">
+    <% [
+      'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 10V11',
+      'M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+      'M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z',
+      'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
+    ].forEach(path => { %>
+      <div class="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center">
+        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="<%= path %>"/></svg>
+      </div>
+    <% }) %>
+  </div>
+</div>
+
+<!-- Status bar -->
+<div class="flex flex-wrap gap-4 text-sm">
+  <div class="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-neutral-200 shadow-sm">
+    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+    <span class="text-neutral-600"><b class="text-neutral-900"><%= connectedCount %></b> connected</span>
+  </div>
+  <div class="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-neutral-200 shadow-sm">
+    <span class="w-2 h-2 rounded-full bg-neutral-300"></span>
+    <span class="text-neutral-600"><b class="text-neutral-900"><%= plugins.length - connectedCount %></b> not connected</span>
+  </div>
+  <div class="flex items-center gap-2 px-4 py-2.5 bg-amber-50 rounded-xl border border-amber-200 shadow-sm ml-auto text-amber-700">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    Credentials are saved to your <code class="font-mono text-xs">.env</code> file on the server
+  </div>
+</div>
+
+<!-- Plugin Cards Grid -->
+<div class="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+  <% plugins.forEach((p) => { %>
+  <div class="a-card flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group" data-plugin-open="<%= p.id %>" role="button" tabindex="0" aria-controls="modal-<%= p.id %>">
+
+    <!-- Card header -->
+    <div class="p-5 pb-0 flex items-start gap-4">
+      <div class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm" style="background: <%= p.color %>18; border: 1.5px solid <%= p.color %>30">
+        <svg class="w-7 h-7" fill="none" stroke="<%= p.color %>" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+          <path d="<%= p.icon %>"/>
+        </svg>
+      </div>
+      <div class="flex-1 min-w-0 pt-0.5">
+        <div class="flex items-center gap-2 flex-wrap">
+          <h3 class="font-bold text-[#1b1c1f]"><%= p.name %></h3>
+          <% if (p.badge) { %><span class="pill pill-blue text-[10px]"><%= p.badge %></span><% } %>
+        </div>
+        <p class="text-xs text-neutral-500 mt-0.5"><%= p.category %></p>
+      </div>
+      <!-- Status dot -->
+      <div class="shrink-0 mt-1">
+        <% if (p.connected) { %>
+          <span class="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+            <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Connected
+          </span>
+        <% } else { %>
+          <span class="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-500 bg-neutral-100 border border-neutral-200 px-2.5 py-1 rounded-full">
+            <span class="w-1.5 h-1.5 rounded-full bg-neutral-400"></span> Not set up
+          </span>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div class="px-5 py-4 flex-1">
+      <p class="text-sm text-neutral-600 leading-relaxed"><%= p.desc %></p>
+      <% if (p.features && p.features.length) { %>
+        <ul class="mt-3 space-y-1">
+          <% p.features.forEach((f) => { %>
+            <li class="flex items-center gap-2 text-xs text-neutral-500">
+              <svg class="w-3.5 h-3.5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              <%= f %>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </div>
+
+    <!-- Footer action -->
+    <div class="px-5 py-4 border-t border-neutral-100 flex items-center justify-between">
+      <span class="text-xs text-neutral-400"><%= p.docsHint %></span>
+      <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors <%= p.connected ? 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200' : 'bg-adm-blue text-white hover:bg-adm-blue2' %>">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+        <%= p.connected ? 'Manage' : 'Connect' %>
+      </span>
+    </div>
+  </div>
+  <% }) %>
+</div>
+
+<!-- ═══════════════════ MODALS ═══════════════════ -->
+<% plugins.forEach((p) => { %>
+<div id="modal-<%= p.id %>" class="fixed inset-0 z-50 hidden" aria-modal="true" role="dialog">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" data-plugin-close="<%= p.id %>"></div>
+  <!-- Panel -->
+  <div class="absolute inset-y-0 right-0 w-full max-w-lg bg-white shadow-2xl flex flex-col">
+
+    <!-- Modal header -->
+    <div class="flex items-center gap-4 px-6 py-5 border-b border-neutral-100">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background: <%= p.color %>18; border: 1.5px solid <%= p.color %>30">
+        <svg class="w-6 h-6" fill="none" stroke="<%= p.color %>" stroke-width="1.6" viewBox="0 0 24 24"><path d="<%= p.icon %>"/></svg>
+      </div>
+      <div class="flex-1">
+        <h2 class="font-bold text-lg text-[#1b1c1f]"><%= p.name %></h2>
+        <p class="text-xs text-neutral-500 mt-0.5"><%= p.category %></p>
+      </div>
+      <% if (p.connected) { %>
+        <span class="pill pill-green text-xs">● Connected</span>
+      <% } %>
+      <button type="button" data-plugin-close="<%= p.id %>" aria-label="Close integration settings" class="w-9 h-9 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors ml-2">
+        <svg class="w-5 h-5 text-neutral-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Modal body (scrollable) -->
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+
+      <!-- Description -->
+      <div class="rounded-xl bg-neutral-50 border border-neutral-200 p-4 text-sm text-neutral-700 leading-relaxed">
+        <%= p.modalDesc %>
+      </div>
+
+      <!-- How to get keys -->
+      <% if (p.howTo) { %>
+      <div class="rounded-xl bg-adm-blue/5 border border-adm-blue/20 p-4">
+        <p class="text-xs font-bold text-adm-blue uppercase tracking-wide mb-2">How to get your credentials</p>
+        <ol class="text-sm text-neutral-700 space-y-1.5 list-decimal list-inside">
+          <% p.howTo.forEach((step) => { %><li><%- step %></li><% }) %>
+        </ol>
+        <% if (p.docsUrl) { %>
+          <a href="<%= p.docsUrl %>" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs text-adm-blue hover:underline mt-3">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Open docs →
+          </a>
+        <% } %>
+      </div>
+      <% } %>
+
+      <!-- Credentials form -->
+      <form id="form-<%= p.id %>" method="post" action="/admin/plugins/<%= p.id %>/save" class="space-y-4">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+
+        <% p.fields.forEach((f) => { %>
+        <div>
+          <label class="a-lbl" for="<%= p.id %>-<%= f.key %>">
+            <%= f.label %>
+            <% if (f.required) { %><span class="text-red-500 ml-0.5">*</span><% } %>
+            <% if (f.secret && f.isSet) { %><span class="pill pill-green text-[10px] ml-1">Saved</span><% } %>
+          </label>
+          <% if (f.type === 'textarea') { %>
+            <textarea id="<%= p.id %>-<%= f.key %>" name="<%= f.key %>" rows="4"
+              class="a-in font-mono text-xs resize-none"
+              placeholder="<%= f.isSet && f.secret ? 'Saved. Paste a new key only to replace it.' : (f.placeholder || '') %>"
+              <%= f.required ? 'required' : '' %>><%= f.value %></textarea>
+          <% } else if (f.type === 'select') { %>
+            <select id="<%= p.id %>-<%= f.key %>" name="<%= f.key %>" class="a-in">
+              <% f.options.forEach((opt) => { %>
+                <option value="<%= opt.value %>" <%= (f.value === opt.value) ? 'selected' : '' %>><%= opt.label %></option>
+              <% }) %>
+            </select>
+          <% } else { %>
+            <div class="relative">
+              <input type="<%= f.secret ? 'password' : 'text' %>"
+                id="<%= p.id %>-<%= f.key %>"
+                name="<%= f.key %>"
+                class="a-in <%= f.secret ? 'pr-10 font-mono' : '' %>"
+                placeholder="<%= f.isSet && f.secret ? 'Saved. Leave blank to keep the current value' : (f.placeholder || (f.secret ? 'Paste your ' + f.label : '')) %>"
+                value="<%= f.value %>"
+                autocomplete="off"
+                <%= f.required ? 'required' : '' %>>
+              <% if (f.secret) { %>
+                <button type="button" data-plugin-toggle-secret="<%= p.id %>-<%= f.key %>" class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700" aria-label="Show or hide <%= f.label %>">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </button>
+              <% } %>
+            </div>
+          <% } %>
+          <% if (f.hint) { %><p class="text-xs text-neutral-400 mt-1"><%= f.hint %></p><% } %>
+        </div>
+        <% }) %>
+      </form>
+
+      <!-- Current status note -->
+      <% if (p.connected) { %>
+      <div class="rounded-xl bg-green-50 border border-green-200 p-4 flex items-start gap-3">
+        <svg class="w-5 h-5 text-green-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+        <div>
+          <p class="text-sm font-semibold text-green-800">Integration active</p>
+          <p class="text-xs text-green-700 mt-0.5">Your credentials are configured. Update the fields above to change them.</p>
+        </div>
+      </div>
+      <% } else { %>
+      <div class="rounded-xl bg-amber-50 border border-amber-200 p-4 flex items-start gap-3">
+        <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        <div>
+          <p class="text-sm font-semibold text-amber-800">Not connected</p>
+          <p class="text-xs text-amber-700 mt-0.5">Fill in the credentials above and click Save to activate this integration.</p>
+        </div>
+      </div>
+      <% } %>
+    </div>
+
+    <!-- Modal footer -->
+    <div class="px-6 py-4 border-t border-neutral-100 bg-neutral-50 flex items-center justify-between gap-3">
+      <% if (p.connected) { %>
+        <form method="post" action="/admin/plugins/<%= p.id %>/disconnect" onsubmit="return confirm('Remove this integration? The credentials will be cleared.')">
+          <input type="hidden" name="_csrf" value="<%= csrf %>">
+          <button type="submit" class="text-sm text-red-500 hover:text-red-700 transition-colors">Disconnect</button>
+        </form>
+      <% } else { %>
+        <span class="text-xs text-neutral-400">Fields marked <span class="text-red-500">*</span> are required</span>
+      <% } %>
+      <div class="flex gap-2">
+        <button type="button" data-plugin-close="<%= p.id %>" class="a-btn-o py-2 px-4">Cancel</button>
+        <button type="submit" form="form-<%= p.id %>" class="a-btn py-2 px-5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+          Save & Connect
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<% }) %>
+
+<%- include('partials/bottom') %>

@@ -1,0 +1,36 @@
+<%- include('partials/top') %>
+<div class="a-card">
+  <div class="p-4 flex flex-wrap gap-3 items-end">
+    <form method="get" class="flex flex-wrap gap-3 items-end flex-1">
+      <div class="min-w-[220px] flex-1"><label class="a-lbl" for="q">Search</label><input class="a-in" id="q" name="q" value="<%= f.q || '' %>" placeholder="Product name or SKU"></div>
+      <div><label class="a-lbl" for="cat">Category</label><select class="a-in" id="cat" name="category" data-autosubmit><option value="">All</option><% categories.forEach((c) => { %><option value="<%= c.slug %>" <%= f.category === c.slug ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
+      <div><label class="a-lbl" for="st">Status</label><select class="a-in" id="st" name="status" data-autosubmit><% [['', 'Published'], ['draft', 'Hidden / draft'], ['all', 'All']].forEach(([v, l]) => { %><option value="<%= v %>" <%= (f.status || '') === v ? 'selected' : '' %>><%= l %></option><% }) %></select></div>
+      <div><label class="a-lbl" for="sk">Stock</label><select class="a-in" id="sk" name="stock" data-autosubmit><% [['', 'Any'], ['low', 'Low stock'], ['out', 'Out of stock']].forEach(([v, l]) => { %><option value="<%= v %>" <%= (f.stock || '') === v ? 'selected' : '' %>><%= l %></option><% }) %></select></div>
+      <button class="a-btn">Search</button>
+    </form>
+    <a class="a-btn" href="/admin/catalogue/new">+ Create product</a>
+  </div>
+  <div class="px-4 pb-4 text-sm text-neutral-600">Product photos from Google Drive: <a class="text-adm-blue font-medium hover:underline" href="/admin/catalogue/drive">link Drive folders to products →</a></div>
+</div>
+<section class="a-card">
+  <div class="p-4 text-sm text-neutral-600"><%= list.length %> of <%= total %> products. Changes appear on the storefront immediately.</div>
+  <% list.forEach((p) => { %>
+  <div class="border-t border-neutral-100 p-4 flex flex-wrap gap-4 items-start">
+    <img src="<%= p.image %>" alt="" class="w-20 h-20 rounded-lg object-cover bg-neutral-100">
+    <div class="flex-1 min-w-[240px]">
+      <div class="flex flex-wrap items-center gap-2"><%- pill(p.status) %> <% if (!p.inStock) { %><%- pill('Out of stock', 'red') %><% } else if (p.variants.some((v) => v.stock <= v.lowStock)) { %><%- pill('Low stock', 'amber') %><% } %> <% if (!p.hasImage) { %><%- pill('No image', 'amber') %><% } %></div>
+      <a href="/admin/catalogue/<%= p.id %>/edit" class="font-medium hover:text-adm-blue block mt-1"><%= p.name %></a>
+      <p class="text-xs text-neutral-500"><%= p.categoryName %> &middot; Lifetime sales: <b><%= sales[p.slug] || 0 %></b></p>
+    </div>
+    <div class="min-w-[220px] text-sm space-y-1"><% p.variants.forEach((v) => { %><div class="flex justify-between gap-4"><span><%= v.label %> <span class="text-neutral-400 text-xs"><%= v.sku %></span></span><span><%= money(v.price) %> &middot; <b class="<%= v.stock <= v.lowStock ? 'text-amber-600' : '' %>"><%= v.stock %></b></span></div><% }) %></div>
+    <div class="flex flex-col gap-2 w-40">
+      <a class="a-btn" href="/admin/catalogue/<%= p.id %>/edit">Edit details</a>
+      <% if (p.status === 'published') { %><a class="a-btn-o" target="_blank" href="/products/<%= p.slug %>">View on site</a><% } %>
+      <form method="post" action="/admin/catalogue/<%= p.id %>/toggle"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-o w-full"><%= p.status === 'published' ? 'Hide from store' : 'Publish' %></button></form>
+      <form method="post" action="/admin/catalogue/<%= p.id %>/delete" data-confirm="Delete <%= p.name %> permanently?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-r w-full">Delete</button></form>
+    </div>
+  </div>
+  <% }) %>
+  <% if (!list.length) { %><p class="p-10 text-center text-neutral-500 border-t">No products match.</p><% } %>
+</section>
+<%- include('partials/bottom') %>

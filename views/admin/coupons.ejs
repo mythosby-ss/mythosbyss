@@ -1,0 +1,17 @@
+<%- include('partials/top') %>
+<div class="grid xl:grid-cols-3 gap-6">
+  <section class="a-card overflow-x-auto xl:col-span-2"><h2 class="a-h p-5 pb-3">Coupons</h2>
+    <table class="a-table min-w-[720px]"><thead><tr><th>Code</th><th>Discount</th><th>Min order</th><th>Expires</th><th>Used</th><th>Status</th><th></th></tr></thead><tbody>
+    <% list.forEach((c) => { const expired = c.expires_on && c.expires_on < today; %><tr><td><b><%= c.code %></b><br><span class="text-xs text-neutral-500"><%= c.title %></span></td><td><%= c.type === 'flat' ? money(c.value) : c.value + '%' %><%= c.max_discount ? ' up to ' + money(c.max_discount) : '' %></td><td><%= money(c.min_order) %></td><td><%= c.expires_on || '-' %></td><td><%= c.used %></td><td><%- expired ? pill('Expired', 'red') : c.active ? pill('Active', 'green') : pill('Off', 'gray') %></td>
+      <td class="whitespace-nowrap"><a class="a-btn-o !py-1" href="?edit=<%= c.id %>">Edit</a> <form class="inline" method="post" action="/admin/coupons/<%= c.id %>/toggle"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-o !py-1"><%= c.active ? 'Turn off' : 'Turn on' %></button></form> <form class="inline" method="post" action="/admin/coupons/<%= c.id %>/delete" data-confirm="Delete <%= c.code %>?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-r !py-1">Delete</button></form></td></tr><% }) %></tbody></table></section>
+  <section class="a-card p-5"><h2 class="a-h mb-3"><%= edit ? 'Edit coupon' : 'Add coupon' %></h2>
+    <form method="post" action="/admin/coupons/save" class="space-y-3"><input type="hidden" name="_csrf" value="<%= csrf %>"><% if (edit) { %><input type="hidden" name="id" value="<%= edit.id %>"><% } %>
+      <div><label class="a-lbl">Code</label><input class="a-in uppercase" name="code" required value="<%= edit ? edit.code : '' %>"></div>
+      <div><label class="a-lbl">Display title</label><input class="a-in" name="title" value="<%= edit ? edit.title : '' %>" placeholder="e.g. 10% off up to Rs.100"></div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="a-lbl">Type</label><select class="a-in" name="type"><option value="percent" <%= edit && edit.type === 'percent' ? 'selected' : '' %>>Percent</option><option value="flat" <%= edit && edit.type === 'flat' ? 'selected' : '' %>>Flat amount</option></select></div><div><label class="a-lbl">Value</label><input class="a-in" type="number" step="0.01" name="value" required value="<%= edit ? edit.value : '' %>"></div></div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="a-lbl">Max discount</label><input class="a-in" type="number" name="max_discount" value="<%= edit && edit.max_discount ? edit.max_discount : '' %>"></div><div><label class="a-lbl">Min order</label><input class="a-in" type="number" name="min_order" value="<%= edit ? edit.min_order : 0 %>"></div></div>
+      <div><label class="a-lbl">Expires on</label><input class="a-in" type="date" name="expires_on" value="<%= edit && edit.expires_on ? edit.expires_on : '' %>"></div>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="active" value="1" <%= !edit || edit.active ? 'checked' : '' %>> Active</label>
+      <button class="a-btn w-full">Save coupon</button><% if (edit) { %><a class="a-btn-o w-full" href="/admin/coupons">Cancel</a><% } %></form></section>
+</div>
+<%- include('partials/bottom') %>

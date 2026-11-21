@@ -1,0 +1,19 @@
+<%- include('partials/top') %>
+<form method="post" action="/admin/settings" class="a-card p-5 max-w-3xl space-y-4">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2 class="a-h">Store settings</h2>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="md:col-span-2"><label class="a-lbl" for="announcement">Announcement bar text</label><input class="a-in" id="announcement" name="announcement" value="<%= s.announcement %>"></div>
+    <div><label class="a-lbl">Store name</label><input class="a-in" name="store_name" value="<%= s.store_name %>"></div>
+    <div><label class="a-lbl">Support email</label><input class="a-in" type="email" name="support_email" value="<%= s.support_email %>"></div>
+    <div><label class="a-lbl">Shipping fee charged to customer (INR)</label><input class="a-in" type="number" min="0" name="shipping_fee" value="<%= s.shipping_fee %>"></div>
+    <div><label class="a-lbl">COD / Partial COD fee (INR)</label><input class="a-in" type="number" min="0" name="cod_fee" value="<%= s.cod_fee %>"></div>
+    <div><label class="a-lbl">Partial COD: % paid online</label><input class="a-in" type="number" min="5" max="90" name="partial_cod_percent" value="<%= s.partial_cod_percent %>"></div>
+    <div><label class="a-lbl">GST % (for tax report)</label><input class="a-in" type="number" step="0.1" name="gst_percent" value="<%= s.gst_percent %>"></div>
+    <div><label class="a-lbl">Your state (GST CGST/SGST vs IGST)</label><input class="a-in" name="home_state" value="<%= s.home_state || 'Uttar Pradesh' %>"></div>
+    <div><label class="a-lbl">Payment gateway fee % (profit estimate)</label><input class="a-in" type="number" step="0.1" name="pg_fee_percent" value="<%= s.pg_fee_percent %>"></div>
+    <div><label class="a-lbl">Review request: hours after delivery</label><input class="a-in" type="number" min="0" name="review_delay_hours" value="<%= s.review_delay_hours %>"></div>
+  </div>
+  <button class="a-btn px-6 py-3">Save settings</button>
+</form>
+<%- include('partials/bottom') %>

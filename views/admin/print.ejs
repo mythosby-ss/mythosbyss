@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex">
+<title><%= docs.includes('label') ? 'Label' : 'Invoice' %> <%= o.id %></title>
+<%
+  const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const day = (iso) => (iso ? new Date(iso).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' }) : '-');
+  const on = (k) => s[k] === '1';
+  const cod = o.payment_method !== 'prepaid';
+  const gstReg = Boolean(s.biz_gstin);
+  const sellerLines = [s.biz_address, [s.biz_city, s.biz_state].filter(Boolean).join(', ') + (s.biz_pincode ? ' - ' + s.biz_pincode : '')].filter((x) => x && x.trim());
+  // Amount in words (Indian system)
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const two = (n) => (n < 20 ? ones[n] : tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : ''));
+  const three = (n) => (n >= 100 ? ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + two(n % 100) : '') : two(n));
+  const words = (n) => { n = Math.floor(n); if (!n) return 'Zero'; const parts = []; const cr = Math.floor(n / 1e7); n %= 1e7; const lk = Math.floor(n / 1e5); n %= 1e5; const th = Math.floor(n / 1e3); n %= 1e3;
+    if (cr) parts.push(three(cr) + ' Crore'); if (lk) parts.push(two(lk) + ' Lakh'); if (th) parts.push(two(th) + ' Thousand'); if (n) parts.push(three(n)); return parts.join(' '); };
+  const paise = Math.round((inv.total % 1) * 100);
+%>
+<style>
+  * { box-sizing: border-box; } body { margin: 0; font: 12px/1.35 Arial, Helvetica, sans-serif; color: #000; background: #eee; }
+  .bar { position: sticky; top: 0; background: #1b1c1f; color: #fff; padding: 10px 16px; display: flex; gap: 12px; align-items: center; font-size: 13px; }
+  .bar button { background: #4c5fc7; color: #fff; border: 0; border-radius: 6px; padding: 8px 18px; font-weight: 600; cursor: pointer; }
+  .bar .warn { color: #fcd34d; }
+  .sheet { background: #fff; margin: 16px auto; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+  .label { width: 4in; min-height: 6in; padding: 10px; page: label; }
+  .invoice { width: 210mm; min-height: 297mm; padding: 14mm; page: invoice; font-size: 11px; }
+  .box { border: 1.5px solid #000; } .row { display: flex; } .grow { flex: 1; } .pad { padding: 6px 8px; } .bt { border-top: 1.5px solid #000; } .bl { border-left: 1.5px solid #000; }
+  .cap { font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: #333; } .big { font-size: 20px; font-weight: 700; } .b { font-weight: 700; }
+  .muted { color: #444; } .tag { display: inline-block; border: 1.5px solid #000; padding: 1px 6px; font-weight: 700; font-size: 11px; }
+  table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #000; padding: 4px 6px; text-align: left; vertical-align: top; } th { background: #f1f1f1; font-size: 10px; }
+  .r { text-align: right; } .logo { max-height: 40px; max-width: 120px; object-fit: contain; }
+  @page label { size: 4in 6in; margin: 0; } @page invoice { size: A4; margin: 0; }
+  @media print { body { background: #fff; } .bar { display: none; } .sheet { margin: 0; box-shadow: none; break-after: page; } }
+</style></head>
+<body>
+<div class="bar"><button type="button" data-print>Print</button>
+  <span><%= docs.includes('label') ? '4 × 6 inch label' : 'A4 invoice' %><%= docs.length > 1 ? ' + A4 invoice' : '' %>. In the print dialog choose the right paper size and set margins to None.</span>
+  <% if (!s.biz_name || !s.biz_address) { %><span class="warn">Seller details are empty: fill Settings → Billing &amp; invoice.</span><% } %>
+</div>
+
+<% if (docs.includes('label')) { %>
+<div class="sheet label"><div class="box">
+  <div class="row pad" style="align-items:center;gap:8px">
+    <% if (on('label_brand_logo') && logo) { %><img class="logo" src="<%= logo %>" alt=""><% } %>
+    <div class="grow"><div class="b" style="font-size:15px"><%= s.store_name || 'MythosBySS' %></div><% if (on('label_order_details')) { %><div class="muted">Order <b><%= o.id %></b> &middot; <%= day(o.created_at) %></div><% } %></div>
+    <div class="r"><div class="big"><%= cod ? 'COD' : 'PREPAID' %></div>
+      <% if (cod && on('label_cod_value')) { %><div>Collect <b style="font-size:15px"><%= inr(o.due_on_delivery) %></b></div><div class="muted" style="font-size:10px">Order value <%= inr(o.total) %></div><% } %>
+      <% if (!cod && on('label_prepaid_value')) { %><div class="muted">Order value <%= inr(o.total) %></div><% } %></div>
+  </div>
+  <div class="bt pad">
+    <div class="cap">Deliver to <% if (on('label_repeat_customer') && o.prevOrders > 0) { %><span class="tag" style="margin-left:6px">REPEAT CUSTOMER</span><% } %></div>
+    <div class="b" style="font-size:15px;margin-top:2px"><%= o.name %></div>
+    <div><%= o.address %></div>
+    <div><%= [o.city, o.state].filter(Boolean).join(', ') %></div>
+    <div class="b" style="font-size:16px">PIN <%= o.pincode %></div>
+    <% if (on('label_customer_phone')) { %><div>Mobile: <b><%= o.phone %></b></div><% } %>
+  </div>
+  <% if (o.awb || o.courier) { %><div class="bt pad row"><div class="grow"><div class="cap">Courier</div><div class="b"><%= o.courier || '-' %></div></div><div class="r"><div class="cap">AWB</div><div class="b" style="font-size:15px;letter-spacing:1px"><%= o.awb || '-' %></div></div></div><% } %>
+  <% if (on('label_order_details') || !on('label_hide_invoice_no')) { %>
+  <div class="bt pad row" style="gap:10px;flex-wrap:wrap">
+    <% if (on('label_order_details')) { %><div><span class="cap">Payment</span><br><%= cod ? (o.payment_method === 'partial_cod' ? 'Partial COD' : 'Cash on delivery') : 'Prepaid' %></div><% } %>
+    <% if (!on('label_hide_invoice_no')) { %><div><span class="cap">Invoice</span><br><%= invoiceNo %> &middot; <%= day(invoiceDate) %></div><% } %>
+  </div><% } %>
+  <% if (!on('label_hide_items')) { %>
+  <div class="bt pad"><div class="cap">Contents</div>
+    <% o.items.forEach((i) => { %><div style="margin-top:3px"><b><%= i.qty %> ×</b> <%= i.product_name %><%= i.variant_label ? ' (' + i.variant_label + ')' : '' %>
+      <div class="muted" style="font-size:10px">SKU: <%= i.sku || '-' %><% if (on('label_product_code') && i.code) { %> &middot; Code: <%= i.code %><% } %></div></div><% }) %>
+  </div><% } else if (on('label_product_code')) { %>
+  <div class="bt pad"><div class="cap">Product codes</div><%= o.items.map((i) => (i.code || i.sku) + ' × ' + i.qty).join(', ') %></div><% } %>
+  <% if (on('label_seller_address') && sellerLines.length) { %>
+  <div class="bt pad" style="font-size:10px"><div class="cap">If undelivered, return to</div>
+    <div class="b"><%= s.biz_name || s.store_name %></div><% sellerLines.forEach((l) => { %><div><%= l %></div><% }) %>
+    <% if (on('label_seller_phone') && s.biz_phone) { %><div>Phone: <%= s.biz_phone %></div><% } %>
+    <% if (gstReg) { %><div>GSTIN: <%= s.biz_gstin %></div><% } %></div><% } %>
+  <% if (on('label_unboxing')) { %><div class="bt pad" style="font-size:10px;font-weight:700;text-align:center">Please record an unboxing video while opening this parcel. It is required for any damage or missing-item claim.</div><% } %>
+</div></div>
+<% } %>
+
+<% if (docs.includes('invoice')) { %>
+<div class="sheet invoice">
+  <div class="row" style="align-items:flex-start;gap:12px">
+    <% if (logo) { %><img class="logo" style="max-height:56px" src="<%= logo %>" alt=""><% } %>
+    <div class="grow"><div class="b" style="font-size:16px"><%= s.biz_name || s.store_name %></div>
+      <% sellerLines.forEach((l) => { %><div><%= l %></div><% }) %>
+      <div><%= [s.biz_phone && 'Phone: ' + s.biz_phone, s.biz_email && 'Email: ' + s.biz_email].filter(Boolean).join(' · ') %></div>
+      <% if (gstReg) { %><div><b>GSTIN:</b> <%= s.biz_gstin %><%= s.biz_pan ? ' · PAN: ' + s.biz_pan : '' %></div><% } %></div>
+    <div class="r"><div class="b" style="font-size:18px"><%= gstReg ? 'TAX INVOICE' : 'INVOICE' %></div><div class="muted">Original for recipient</div></div>
+  </div>
+  <table style="margin-top:12px"><tr>
+    <td style="width:50%"><div class="cap">Bill to / Ship to</div><div class="b"><%= o.name %></div><div><%= o.address %></div><div><%= o.city %>, <%= o.state %> - <%= o.pincode %></div><div>Phone: <%= o.phone %></div><% if (o.email) { %><div><%= o.email %></div><% } %></td>
+    <td><div><b>Invoice no:</b> <%= invoiceNo %></div><div><b>Invoice date:</b> <%= day(invoiceDate) %></div><div><b>Order ID:</b> <%= o.id %></div><div><b>Order date:</b> <%= day(o.created_at) %></div>
+      <div><b>Payment:</b> <%= o.payment_method === 'prepaid' ? 'Prepaid' : o.payment_method === 'partial_cod' ? 'Partial COD' : 'Cash on delivery' %></div>
+      <div><b>Place of supply:</b> <%= o.state %></div></td>
+  </tr></table>
+  <table style="margin-top:10px">
+    <thead><tr><th style="width:24px">#</th><th>Description</th><% if (s.biz_hsn) { %><th>HSN</th><% } %><th class="r">Qty</th><th class="r">Amount (incl. tax)</th><% if (gstReg) { %><th class="r">Taxable value</th><th class="r">GST <%= inv.rate %>%</th><% } %></tr></thead>
+    <tbody><% inv.lines.forEach((l, n) => { %><tr><td><%= n + 1 %></td><td><%= l.desc %><% if (l.sku) { %><div class="muted" style="font-size:9px">SKU: <%= l.sku %></div><% } %></td><% if (s.biz_hsn) { %><td><%= l.sku ? s.biz_hsn : '' %></td><% } %><td class="r"><%= l.qty %></td><td class="r"><%= inr(l.gross) %></td><% if (gstReg) { %><td class="r"><%= inr(l.taxable) %></td><td class="r"><%= inr(l.tax) %></td><% } %></tr><% }) %></tbody>
+  </table>
+  <div class="row" style="margin-top:10px;gap:12px;align-items:flex-start">
+    <div class="grow"><div class="cap">Amount in words</div><div class="b">Rupees <%= words(inv.total) %><%= paise ? ' and ' + two(paise) + ' Paise' : '' %> Only</div>
+      <% if (o.refunded > 0) { %><div style="margin-top:6px">Refunded: <%= inr(o.refunded) %></div><% } %>
+      <% if (s.invoice_note) { %><div style="margin-top:10px" class="muted"><%= s.invoice_note %></div><% } %></div>
+    <table style="width:260px"><% if (gstReg) { %>
+      <tr><td>Taxable value</td><td class="r"><%= inr(inv.taxable) %></td></tr>
+      <% if (inv.intra) { %><tr><td>CGST <%= inv.rate / 2 %>%</td><td class="r"><%= inr(inv.cgst) %></td></tr><tr><td>SGST <%= inv.rate / 2 %>%</td><td class="r"><%= inr(inv.sgst) %></td></tr>
+      <% } else { %><tr><td>IGST <%= inv.rate %>%</td><td class="r"><%= inr(inv.igst) %></td></tr><% } %><% } %>
+      <tr><td class="b">Total</td><td class="r b"><%= inr(inv.total) %></td></tr>
+      <% if (o.payment_method !== 'prepaid') { %><tr><td>Paid online</td><td class="r"><%= inr(o.pay_now) %></td></tr><tr><td>Due on delivery</td><td class="r"><%= inr(o.due_on_delivery) %></td></tr><% } %>
+    </table>
+  </div>
+  <div class="row" style="margin-top:40px"><div class="grow muted" style="font-size:10px">This is a computer-generated invoice and does not need a signature.<%= gstReg ? '' : ' Seller not registered under GST.' %></div>
+    <div class="r"><div>For <b><%= s.biz_name || s.store_name %></b></div><div style="margin-top:30px" class="muted">Authorised signatory</div></div></div>
+</div>
+<% } %>
+<script src="/js/print.js" defer></script>
+</body></html>

@@ -1,0 +1,86 @@
+<%- include('partials/top') %>
+<div class="a-card">
+  <nav class="flex gap-1 px-3 border-b border-neutral-200 overflow-x-auto" aria-label="Dashboard tabs">
+    <% [['order','Order'],['product','Product'],['business','Business metrics'],['inventory','Inventory'],['whatsapp','WhatsApp']].forEach(([k, l]) => { %>
+      <a class="a-tab <%= tab === k ? 'a-tab-on' : '' %>" href="?tab=<%= k %>&from=<%= r.from %>&to=<%= r.to %>"><%= l %></a>
+    <% }) %>
+  </nav>
+  <% if (tab !== 'inventory') { %><div class="p-4 bg-[#eef0f8] rounded-b-xl">
+    <%- include('partials/range', { r, hidden: { tab }, extra: tab === 'order' ? `<div><label class="a-lbl" for="method">Payment mode</label><select class="a-in" id="method" name="method"><option value="">All</option>${[['cod','COD'],['prepaid','Prepaid'],['partial_cod','Partial COD']].map(([v,l]) => `<option value="${v}" ${method === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : '' }) %></div><% } %>
+</div>
+
+<% if (tab === 'order') { const D = d; %>
+  <div class="grid lg:grid-cols-2 gap-4">
+    <section class="a-card p-5"><h2 class="a-h mb-4">Order trend</h2><%- include('partials/bars', { labels: D.daily.map((x) => x.d.slice(8) + '/' + x.d.slice(5, 7)), a: D.daily.map((x) => x.ok), b: D.daily.map((x) => x.placed), aName: 'Confirmed orders', bName: 'Total orders', money: false }) %></section>
+    <section class="a-card p-5"><h2 class="a-h mb-4">Revenue trend</h2><%- include('partials/bars', { labels: D.daily.map((x) => x.d.slice(8) + '/' + x.d.slice(5, 7)), a: D.daily.map((x) => x.rev), b: D.daily.map((x) => x.revAll), aName: 'Confirmed revenue', bName: 'Total revenue', money: true }) %></section>
+  </div>
+  <section class="a-card p-5">
+    <h2 class="a-h mb-4">Order details</h2>
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div class="kpi"><b><%= D.tot.ok %></b><span>Confirmed orders</span></div>
+      <div class="kpi"><b><%= D.tot.pending %></b><span>To dispatch</span></div>
+      <div class="kpi"><b><%= D.tot.transit %></b><span>In transit</span></div>
+      <div class="kpi"><b class="!text-green-600"><%= D.tot.delivered %></b><span>Delivered</span></div>
+      <div class="kpi"><b class="!text-red-600"><%= D.tot.rto %></b><span>RTO</span></div>
+    </div>
+    <div class="overflow-x-auto mt-4"><table class="a-table min-w-[700px]"><thead><tr><th>Date</th><th>Placed</th><th>Cancelled</th><th>Confirmed</th><th>To dispatch</th><th>In transit</th><th>Delivered</th><th>RTO</th><th>Revenue</th></tr></thead><tbody>
+      <% D.daily.slice().reverse().forEach((x) => { %><tr><td><%= x.d %></td><td><%= x.placed %></td><td><%= x.cancelled %></td><td><%= x.ok %></td><td><%= x.pending %></td><td><%= x.transit %></td><td><%= x.delivered %></td><td><%= x.rto %></td><td><%= money(x.rev) %></td></tr><% }) %></tbody></table></div>
+  </section>
+  <div class="grid lg:grid-cols-3 gap-4">
+    <section class="a-card p-5"><h2 class="a-h mb-4">Payment mode</h2>
+      <% const totalN = D.payment.reduce((s, x) => s + x.n, 0) || 1; const cols = { cod: '#4c5fc7', prepaid: '#22a06b', partial_cod: '#f59e0b' }; let acc = 0;
+         const stops = D.payment.map((x) => { const a = acc; acc += x.n / totalN * 100; return `${cols[x.m]} ${a}% ${acc}%`; }).join(', '); %>
+      <div class="flex items-center gap-6"><div class="w-32 h-32 rounded-full shrink-0" style="background: conic-gradient(<%= stops || '#e5e7eb 0 100%' %>); mask: radial-gradient(circle 38px at center, transparent 98%, #000 100%); -webkit-mask: radial-gradient(circle 38px at center, transparent 98%, #000 100%)"></div>
+      <ul class="text-sm space-y-2"><% D.payment.forEach((x) => { %><li><i class="inline-block w-2.5 h-2.5 rounded-full mr-2" style="background: <%= cols[x.m] %>"></i><%= x.m.replace('_', ' ').toUpperCase() %> <b><%= Math.round(x.n / totalN * 100) %>%</b> <span class="text-neutral-500">(<%= x.n %> orders, <%= money(x.rev) %>)</span></li><% }) %><% if (!D.payment.length) { %><li class="text-neutral-500">No orders in this period</li><% } %></ul></div>
+    </section>
+    <section class="a-card p-5"><h2 class="a-h mb-4">State-wise orders</h2>
+      <% const sm = Math.max(1, ...D.states.map((x) => x.n)); %><ul class="space-y-2 text-sm"><% D.states.forEach((x) => { %><li><div class="flex justify-between"><span><%= x.state %></span><b><%= x.n %></b></div><div class="h-1.5 bg-neutral-100 rounded"><div class="h-1.5 bg-[#4c5fc7] rounded" style="width: <%= Math.round(x.n / sm * 100) %>%"></div></div></li><% }) %><% if (!D.states.length) { %><li class="text-neutral-500">No data</li><% } %></ul></section>
+    <section class="a-card p-5"><h2 class="a-h mb-4">Average order value</h2><p class="text-3xl font-semibold text-adm-blue"><%= money(D.aov) %></p><p class="text-sm text-neutral-500 mt-1">per confirmed order</p>
+      <h3 class="font-medium mt-6 mb-2 text-sm">Cancellation reasons</h3><ul class="text-sm space-y-1"><% D.cancels.forEach((x) => { %><li class="flex justify-between"><span><%= x.reason %></span><b><%= x.n %></b></li><% }) %><% if (!D.cancels.length) { %><li class="text-neutral-500">None</li><% } %></ul></section>
+  </div>
+  <div class="grid lg:grid-cols-2 gap-4">
+    <section class="a-card"><h2 class="a-h p-5 pb-3">Top 10 cities</h2><table class="a-table"><thead><tr><th>City</th><th>Orders</th></tr></thead><tbody><% D.cities.forEach((x) => { %><tr><td><%= x.city %></td><td><%= x.n %></td></tr><% }) %></tbody></table></section>
+    <section class="a-card"><h2 class="a-h p-5 pb-3">Top 10 products</h2><table class="a-table"><thead><tr><th>Product</th><th>Units</th></tr></thead><tbody><% D.products.forEach((x) => { %><tr><td><a class="text-adm-blue hover:underline" href="/products/<%= x.slug %>"><%= x.name %></a></td><td><%= x.units %></td></tr><% }) %></tbody></table></section>
+  </div>
+<% } %>
+
+<% if (tab === 'product') { %>
+  <div class="grid lg:grid-cols-2 gap-4">
+    <section class="a-card p-5"><h2 class="a-h mb-3">Best sellers</h2><ol class="space-y-2 text-sm"><% p.best.forEach((x, i) => { %><li class="flex justify-between gap-3"><span><%= i + 1 %>. <%= x.name %></span><span class="text-neutral-600"><%= x.units %> units &middot; <b><%= money(x.revenue) %></b></span></li><% }) %><% if (!p.best.length) { %><li class="text-neutral-500">No sales in this period.</li><% } %></ol></section>
+    <section class="a-card p-5"><h2 class="a-h mb-1">Underperforming</h2><p class="text-xs text-neutral-500 mb-3">No sales, or 10+ views with under 1% conversion.</p><ul class="space-y-2 text-sm"><% p.under.forEach((x) => { %><li class="flex justify-between gap-3"><span><%= x.name %></span><span class="text-neutral-600"><%= x.views %> views &middot; <%= x.units %> sold</span></li><% }) %></ul></section>
+  </div>
+  <section class="a-card overflow-x-auto"><h2 class="a-h p-5 pb-3">Product-wise sales and revenue</h2>
+    <table class="a-table min-w-[900px]"><thead><tr><th>Product</th><th>Category</th><th>Views</th><th>Orders</th><th>Units</th><th>Revenue</th><th>Share</th><th>Gross margin</th><th>RTO %</th><th>Conv. %</th><th>Stock</th></tr></thead><tbody>
+    <% p.all.forEach((x) => { %><tr><td><%= x.name %></td><td><%= x.category %></td><td><%= x.views %></td><td><%= x.orders %></td><td><%= x.units %></td><td><%= money(x.revenue) %></td><td><%= x.share %>%</td><td><%= money(x.revenue - x.cost) %></td><td><%= x.rtoPct %>%</td><td><%= x.conv %>%</td><td><%= x.stock %></td></tr><% }) %></tbody></table></section>
+<% } %>
+
+<% if (tab === 'business') { const F = b.funnel; const steps = [['Sessions', F.sessions], ['Viewed a product', F.product_view], ['Added to cart', F.add_to_cart], ['Started checkout', F.begin_checkout], ['Purchased', F.purchase]]; %>
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="kpi"><b><%= b.conversion %>%</b><span>Conversion rate (orders / sessions)</span></div>
+    <div class="kpi"><b><%= F.sessions %></b><span>Sessions</span></div>
+    <div class="kpi"><b><%= b.orders %></b><span>Orders</span></div>
+    <div class="kpi"><b><%= b.repeatRate %>%</b><span>Repeat customers</span></div>
+  </div>
+  <div class="grid lg:grid-cols-2 gap-4">
+    <section class="a-card p-5"><h2 class="a-h mb-4">Conversion funnel</h2><% steps.forEach(([l, v], i) => { const w = F.sessions ? Math.max(3, Math.round(v / F.sessions * 100)) : 3; %><div class="mb-3"><div class="flex justify-between text-sm"><span><%= l %></span><b><%= v %> <span class="text-neutral-500 font-normal"><%= i ? '(' + (steps[i - 1][1] ? Math.round(v / steps[i - 1][1] * 100) : 0) + '% of previous)' : '' %></span></b></div><div class="h-2 bg-neutral-100 rounded"><div class="h-2 bg-adm-blue rounded" style="width: <%= w %>%"></div></div></div><% }) %></section>
+    <section class="a-card p-5"><h2 class="a-h mb-4">Traffic sources</h2><table class="a-table"><thead><tr><th>Source</th><th>Sessions</th></tr></thead><tbody><% b.sources.forEach((x) => { %><tr><td><%= x.source %></td><td><%= x.sessions %></td></tr><% }) %></tbody></table></section>
+  </div>
+  <section class="a-card overflow-x-auto"><h2 class="a-h p-5 pb-3">COD vs prepaid performance</h2>
+    <table class="a-table min-w-[700px]"><thead><tr><th>Payment mode</th><th>Orders</th><th>Revenue</th><th>AOV</th><th>Delivered</th><th>RTO</th><th>RTO %</th><th>Cancelled</th></tr></thead><tbody>
+    <% b.modes.forEach((m) => { const live = m.n - m.cancelled; %><tr><td><%= m.m.replace('_', ' ').toUpperCase() %></td><td><%= m.n %></td><td><%= money(m.rev) %></td><td><%= live ? money(Math.round(m.rev / live)) : '-' %></td><td><%= m.delivered %></td><td><%= m.rto %></td><td><%= live ? Math.round(m.rto / live * 1000) / 10 : 0 %>%</td><td><%= m.cancelled %></td></tr><% }) %></tbody></table></section>
+<% } %>
+
+<% if (tab === 'inventory') { const out = inv.filter((v) => v.stock <= 0).length; const low = inv.filter((v) => v.stock > 0 && v.stock <= v.low_stock).length; %>
+  <div class="grid grid-cols-3 gap-4"><div class="kpi"><b class="!text-red-600"><%= out %></b><span>Out of stock</span></div><div class="kpi"><b class="!text-amber-600"><%= low %></b><span>Low stock</span></div><div class="kpi"><b><%= inv.length %></b><span>Active SKUs</span></div></div>
+  <section class="a-card overflow-x-auto"><table class="a-table min-w-[600px]"><thead><tr><th>Product</th><th>Size</th><th>SKU</th><th>Stock</th><th>Alert at</th><th>Status</th></tr></thead><tbody>
+    <% inv.slice(0, 60).forEach((v) => { %><tr><td><%= v.name %></td><td><%= v.label %></td><td><%= v.sku %></td><td><%= v.stock %></td><td><%= v.low_stock %></td><td><%- v.stock <= 0 ? pill('Out of stock', 'red') : v.stock <= v.low_stock ? pill('Low stock', 'amber') : pill('In stock', 'green') %></td></tr><% }) %></tbody></table>
+    <p class="p-4 text-sm"><a class="text-adm-blue" href="/admin/inventory">Manage inventory</a></p></section>
+<% } %>
+
+<% if (tab === 'whatsapp') { %>
+  <section class="a-card overflow-x-auto"><h2 class="a-h p-5 pb-3">Messages by template</h2><table class="a-table"><thead><tr><th>Template</th><th>Status</th><th>Count</th></tr></thead><tbody>
+    <% w.forEach((x) => { %><tr><td><%= x.template %></td><td><%- pill(x.status) %></td><td><%= x.n %></td></tr><% }) %><% if (!w.length) { %><tr><td colspan="3" class="text-neutral-500">No messages in this period.</td></tr><% } %></tbody></table></section>
+  <section class="a-card overflow-x-auto"><h2 class="a-h p-5 pb-3">Latest messages</h2><table class="a-table"><thead><tr><th>When</th><th>Order</th><th>Template</th><th>Status</th><th>Error</th></tr></thead><tbody>
+    <% wlog.forEach((x) => { %><tr><td><%= dt(x.created_at) %></td><td><%= x.order_id %></td><td><%= x.template %></td><td><%- pill(x.status) %></td><td class="text-red-600"><%= x.error || '' %></td></tr><% }) %></tbody></table></section>
+<% } %>
+<%- include('partials/bottom') %>

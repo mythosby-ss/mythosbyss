@@ -1,29 +1,38 @@
-<%- include('../partials/head') %>
-<div class="container-x py-10">
-  <div class="flex items-center justify-between"><h1 class="text-3xl font-semibold">Orders (<%= orders.length %>)</h1><a href="/" class="text-sm underline">View store</a></div>
-  <div class="mt-6 overflow-x-auto border border-neutral-200 rounded-xl">
-    <table class="w-full text-sm">
-      <thead class="bg-paper text-left"><tr><th class="p-3">Order</th><th class="p-3">Customer</th><th class="p-3">Items</th><th class="p-3">Payment</th><th class="p-3">Collect on delivery</th><th class="p-3">Status</th></tr></thead>
+<%- include('partials/top') %>
+<section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+  <div class="kpi"><b><%= summary.nonDispatched %></b><span>Non-dispatched orders</span></div>
+  <div class="kpi"><b><%= summary.packed %></b><span>Packed, awaiting pickup</span></div>
+  <div class="kpi"><b><%= summary.inTransit %></b><span>In transit</span></div>
+  <div class="kpi"><b class="<%= summary.delayed ? '!text-red-600' : '' %>"><%= summary.delayed %></b><span>Delayed (&gt;48h, not dispatched)</span></div>
+</section>
+<div class="a-card">
+  <nav class="flex gap-1 px-3 border-b border-neutral-200 overflow-x-auto"><% Object.entries(tabs).forEach(([k, t]) => { %><a class="a-tab <%= tab === k ? 'a-tab-on' : '' %>" href="?tab=<%= k %>"><%= t.label %> (<%= counts[k] %>)</a><% }) %></nav>
+  <form method="get" class="p-4 flex flex-wrap gap-3 items-end">
+    <input type="hidden" name="tab" value="<%= tab %>">
+    <div class="flex-1 min-w-[220px]"><label class="a-lbl" for="q">Search</label><input class="a-in" id="q" name="q" value="<%= q %>" placeholder="Order ID, phone, name or AWB"></div>
+    <div><label class="a-lbl" for="m">Payment</label><select class="a-in" id="m" name="method"><option value="">All</option><% [['cod','COD'],['prepaid','Prepaid'],['partial_cod','Partial COD']].forEach(([v, l]) => { %><option value="<%= v %>" <%= method === v ? 'selected' : '' %>><%= l %></option><% }) %></select></div>
+    <button class="a-btn">Filter</button>
+  </form>
+  <form method="post" action="/admin/orders/bulk" id="bulk">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <% if (tab === 'pending') { %><div class="px-4 pb-3"><button class="a-btn-o" form="bulk">Mark selected as packed</button></div><% } %>
+    <div class="overflow-x-auto"><table class="a-table min-w-[980px]">
+      <thead><tr><th class="w-8"><input type="checkbox" data-select-all aria-label="Select all"></th><th>Order</th><th>Product</th><th>Payment</th><th>Customer</th><th>Shipping</th><th></th></tr></thead>
       <tbody>
-      <% orders.forEach((o) => { %>
-        <tr class="border-t border-neutral-200 align-top">
-          <td class="p-3"><strong><%= o.id %></strong><br><span class="text-neutral-500"><%= new Date(o.createdAt).toLocaleString('en-IN') %></span></td>
-          <td class="p-3"><%= o.customer.name %><br><%= o.customer.phone %><br><span class="text-neutral-500"><%= o.address.line1 %>, <%= o.address.city %>, <%= o.address.state %> <%= o.address.pincode %></span></td>
-          <td class="p-3"><% o.items.forEach((i) => { %><%= i.name %> (<%= i.variant %>) &times; <%= i.qty %><br><% }) %></td>
-          <td class="p-3"><%= o.paymentMethod.replace('_', ' ') %><br>Total <%= money(o.amounts.total) %><br><span class="text-neutral-500"><%= o.payment.status.replace(/_/g, ' ') %></span></td>
-          <td class="p-3 font-semibold"><%= money(o.amounts.dueOnDelivery) %></td>
-          <td class="p-3">
-            <form method="post" action="/admin/orders/<%= o.id %>/status" class="flex gap-2">
-              <input type="hidden" name="_csrf" value="<%= csrf %>">
-              <select name="status" class="border border-neutral-300 rounded px-2 py-1"><% statuses.forEach((s) => { %><option value="<%= s %>" <%= o.status === s ? 'selected' : '' %>><%= s.replace('_', ' ') %></option><% }) %></select>
-              <button class="btn-dark py-1 px-3 text-xs">Save</button>
-            </form>
-          </td>
+      <% list.forEach((o) => { const late = ['confirmed', 'packed'].includes(o.status) && (Date.now() - new Date(o.created_at)) > 48 * 36e5; %>
+        <tr>
+          <td><input type="checkbox" name="ids" value="<%= o.id %>" data-row-check aria-label="Select <%= o.id %>"></td>
+          <td><a class="font-semibold text-adm-blue hover:underline" href="/admin/orders/<%= o.id %>"><%= o.id %></a><br><%- pill(o.status) %> <% if (late) { %><%- pill('Delayed', 'red') %><% } %><br><span class="text-xs text-neutral-500"><%= dt(o.created_at) %></span></td>
+          <td><div class="flex gap-3 min-w-[230px]"><% if (o.thumb) { %><img src="<%= o.thumb %>" alt="" class="w-12 h-12 rounded object-cover bg-neutral-100"><% } %><div><% o.items.forEach((i) => { %><p><%= i.product_name %></p><p class="text-xs text-neutral-500"><%= i.variant_label %> &times; <%= i.qty %> &middot; <%= i.sku %></p><% }) %></div></div></td>
+          <td><%- pill(o.payment_method.replace('_', ' ').toUpperCase(), 'gray') %><br><b><%= money(o.total) %></b><br><span class="text-xs text-neutral-500">Collect <%= money(o.due_on_delivery) %></span><br><%- pill(o.payment_status) %></td>
+          <td><%= o.name %><br><span class="text-xs"><%= o.phone %></span><br><span class="text-xs text-neutral-500"><%= o.city %>, <%= o.state %> <%= o.pincode %></span></td>
+          <td><% if (o.awb) { %><span class="text-xs">AWB <b><%= o.awb %></b><br><%= o.courier %> &middot; <%= money(o.courier_charge) %></span><% } else { %><span class="text-xs text-neutral-400">Not assigned</span><% } %></td>
+          <td class="whitespace-nowrap"><a class="a-btn-o" href="/admin/orders/<%= o.id %>">Manage</a> <a class="a-btn-o" href="/admin/orders/<%= o.id %>/label" download>Label PDF</a></td>
         </tr>
       <% }) %>
-      <% if (!orders.length) { %><tr><td colspan="6" class="p-8 text-center text-neutral-500">No orders yet.</td></tr><% } %>
-      </tbody>
-    </table>
-  </div>
+      <% if (!list.length) { %><tr><td colspan="7" class="text-center text-neutral-500 py-10">No orders here.</td></tr><% } %>
+      </tbody></table></div>
+  </form>
+  <% if (pages > 1) { %><div class="p-4 flex gap-2 text-sm"><% for (let i = 1; i <= pages; i++) { %><a class="px-3 py-1 rounded border <%= i === page ? 'bg-adm-blue text-white border-adm-blue' : 'border-neutral-300' %>" href="?tab=<%= tab %>&q=<%= encodeURIComponent(q) %>&method=<%= method %>&page=<%= i %>"><%= i %></a><% } %></div><% } %>
 </div>
-</body></html>
+<%- include('partials/bottom') %>

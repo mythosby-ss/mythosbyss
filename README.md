@@ -1,62 +1,39 @@
-# MythosBySS storefront
+# MythosBySS - storefront + admin portal
 
-Node.js + Express + EJS e-commerce site with Tailwind CSS (installed package, compiled with the Tailwind CLI, no CDN), session cart, Buy Now, and three payment modes: **Prepaid (Razorpay)**, **Cash on Delivery** and **Partial COD** (advance via Razorpay, balance in cash).
-
-## Run it
+Node.js, Express, EJS, Tailwind CSS (installed package, no CDN), libSQL/Turso database, Razorpay, WhatsApp Cloud API, Google Drive media.
 
 ```bash
-cp .env.example .env      # add your Razorpay test keys
-npm install               # also builds public/css/styles.css (postinstall)
-npm run dev               # nodemon + Tailwind watch  ->  http://localhost:3000
-# production
-npm run build:css && NODE_ENV=production npm start
+cp .env.example .env     # fill what you have; everything optional works in "simulated" mode locally
+npm install              # also builds public/css/styles.css
+npm run dev              # store: http://localhost:3000   admin: http://localhost:3000/admin
 ```
+Full service setup (Turso, Drive, WhatsApp, Razorpay): **docs/SETUP.md**. WhatsApp template text: **docs/WHATSAPP_TEMPLATES.md**.
 
-## What is included
-
-| Area | Details |
+## Customer side
+| Feature | Notes |
 |---|---|
-| Home | Hero carousel, one product from each of the 12 categories, new arrivals, customer reviews with photos |
-| Browsing | `/collections/:category`, `/new-arrivals`, `/products` (search `?q=`, sort, category chips) |
-| Product page | Gallery, size/variant picker with live price, quantity, **Add to cart**, **Buy now**, pincode check, specs table, reviews, related products, JSON-LD |
-| Cart | Session cart, update/remove, savings summary |
-| Checkout | Validated address form, 3 payment methods, server-side price calculation |
-| Orders | Confirmation page, `/track` (order ID + phone), `/admin` order list (HTTP basic auth) |
-| Security | Helmet CSP, CSRF token on every POST, rate limits, Razorpay HMAC signature verification, webhook fallback |
+| WhatsApp login | `/login`: phone number -> 6-digit code sent as a WhatsApp *authentication* template. Hashed codes, 5-minute expiry, 5 tries, 3 codes per 15 min. Checkout needs login, address is remembered. |
+| Catalogue | Reads from the database. Admin edits show up immediately (cache refresh on save). Out-of-stock sizes are disabled, stock is reserved at order time. |
+| Payments | Prepaid (Razorpay), COD, Partial COD (advance via Razorpay, balance on delivery). Totals are computed on the server. Coupons supported. |
+| Orders | Order page with progress tracker and AWB; `/account` lists all orders. |
+| Social proof | Home page UGC video section (Drive videos, click-to-play), photo reviews, product-page videos and reviews. Customers review through the WhatsApp link after delivery; admin approves. |
+| SEO | Per-product/category titles and descriptions, canonical + Open Graph tags, `sitemap.xml`, `robots.txt`, JSON-LD, 301 redirects when a URL slug is changed. |
 
-## Payments
+## Admin portal (`/admin`, left navigation like the reference)
+* **Home** - weekly/monthly trend report (orders, RTO %, sales, courier cost, ad spend, gateway fees, product cost, net profit; Meta/Google filter).
+* **Analytics > Dashboard** - tabs: Order (trends, payment mode, states, cities, top products, AOV, cancellations), Product (best/under-performers, product-wise revenue and margin), Business metrics (funnel, conversion rate, traffic sources, COD vs prepaid, repeat rate), Inventory (low-stock alerts), WhatsApp. **Reports** - 9 downloadable CSVs (reconciliation, orders, dispatched, shipping, cash-flow, GST tax, product performance, WhatsApp log, customers).
+* **Orders** - process queue (pack, ship with courier + AWB, out for delivery, delivered, cancel, RTO), label printing, refunds (Razorpay or manual), full timeline and WhatsApp log per order. Each status change sends the customer a WhatsApp update.
+* **Finance** - remittance overview (outstanding COD, in-transit COD, prepaid received, refunds), settlement creation/payout tracking, order-wise finance table with CSV, refunds and cancellations.
+* **Products** - catalogue list, create/edit (variants, price, MRP, cost, stock, SEO, images), Drive upload / Drive link / "Sync from Drive folder", inventory editor.
+* **Customers**, **Offers and Coupons**.
+* **Marketing** - *Performance* (campaigns, daily spend, CPA, ROAS, CTR, campaign- and product-wise views; orders attributed through `utm_campaign`), *Digital* (home banners, promotion planner with UTM link builder), *SEO* (score and issues per product, inline metadata editing, traffic sources, searches with no results).
+* **Website** - UGC testimonials (import all videos from a Drive folder), review moderation.
+* **Communication** - WhatsApp status, template names, delivery log, test message. **Settings** - announcement bar, shipping/COD fees, partial-COD %, GST %.
 
-* `POST /checkout/place` recomputes totals on the server, saves the order and (if money is due now) creates a Razorpay order.
-* Browser opens Razorpay Checkout; on success `POST /checkout/verify` checks `HMAC_SHA256(order_id|payment_id)` with your key secret before confirming.
-* **Partial COD**: `PARTIAL_COD_PERCENT` (default 20) is charged online; the order shows the balance to collect on delivery (also visible in `/admin`).
-* Webhook (recommended): in the Razorpay dashboard add `https://YOUR-DOMAIN/webhooks/razorpay`, events `payment.captured` and `order.paid`, and put the secret in `RAZORPAY_WEBHOOK_SECRET`.
-* Use `rzp_test_` keys until you go live.
-
-## Product data and prices
-
-`data/products.js` holds 81 products / 134 variants extracted from the PDF (names, sizes, item codes, master packs, categories). SKUs are `MB-NK-N-<item code>`.
-
-**The PDF contains no prices, so every price is a placeholder.** Edit the third number in each variant tuple. MRP is automatically 2x price to match the "Save min 50%" banner.
-
-Catalog notes to double-check:
-* Super, Bento Buddy and Fresh Bite lunch boxes have no item code in the PDF, so they were given N-619, N-620, N-621.
-* A few pages disagree with themselves (Antic: size 800 vs code 600; Hydro: 900 vs 800; Cool Star 3000 vs 2500). The item-code size was used.
-* The "Doremon" combo page was labelled "Applo lunch box & hydro bottle" in the PDF.
-
-## Images (Google Drive)
-
-I could not download your Drive folder from here, so images are wired up two ways. Use whichever is easier:
-
-1. **Local files (recommended for production):** download the Drive images and save them in `public/images/products/` named after the product slug, e.g. `crystal-casserole.jpg`, plus `crystal-casserole-2.jpg` for extra gallery shots. Run `npm run slugs` to print every expected name.
-2. **Direct from Drive:** share each file as "Anyone with the link", then map the slug to the file ID in `data/images.json`:
-   `"crystal-casserole": ["<fileId>", "<fileId2>"]`
-Missing images fall back to `public/images/placeholder.svg`.
-
-Customer review photos: put files in `public/images/reviews/` and set `photo` in `data/reviews.js` (otherwise the reviewed product image is shown).
-
-## Before going live
-
-* Swap the JSON order store (`lib/store.js`) for MongoDB/Postgres and the session MemoryStore for Redis.
-* Send order emails/SMS (e.g. Nodemailer, MSG91) from `lib/orders.js` / `routes/checkout.js`.
-* Replace the sample reviews, policy text and the demo pincode check (courier API such as Shiprocket).
-* Add GST invoice fields if you need them, and set a strong `SESSION_SECRET` and admin password.
+## Things to know
+* **Prices:** the PDF had none. All prices are placeholders; edit them under Products > Catalogue (each variant). MRP was seeded at 2x price.
+* **Ad platforms:** spend/impressions/clicks are entered manually or pasted as CSV rows from Ads Manager. Orders, revenue, CPA and ROAS are real, attributed from UTM tags on your ad links. Automatic Meta/Google Ads API sync is not included.
+* **Courier:** status is set by admin or by the generic `POST /webhooks/shipping` endpoint (header `x-webhook-secret`). No courier booking API is wired.
+* **WhatsApp:** templates need Meta approval; review requests may be billed as marketing messages.
+* **Security:** CSRF on every POST, Helmet CSP, rate limits (login, OTP, checkout), signed Razorpay/WhatsApp webhooks, formula-safe CSV exports. Admin is a single login from `.env`; put the site behind HTTPS.
+* **Tests:** the SQL layer and every storefront/admin route were exercised in a local harness with the database and web framework replaced by stand-ins. Run the real thing once with `npm run dev` and click through before launch.

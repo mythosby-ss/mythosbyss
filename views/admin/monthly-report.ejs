@@ -1,0 +1,312 @@
+<%- include('partials/top') %>
+
+<%
+  const fmtM = (d) => { const [y, m] = d.split('-'); const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return names[+m - 1] + ' ' + y; };
+  const neg = (v) => `<span class="text-red-500">-${money(Math.abs(v))}</span>`;
+  const pos = (v) => `<span class="text-green-600">+${money(v)}</span>`;
+  const profClass = (v) => v < 0 ? 'text-red-600 font-bold' : 'text-green-700 font-bold';
+%>
+
+<!-- ═══════════════════ HEADER + FILTERS ═══════════════════ -->
+<div class="a-card">
+  <div class="flex flex-wrap items-center justify-between gap-4 p-5 border-b border-neutral-100">
+    <div>
+      <h2 class="a-h">Monthly Analytics Report</h2>
+      <p class="text-sm text-neutral-500 mt-0.5">Evaluate business performance on a monthly basis. Covers orders, revenue, costs, and profitability.</p>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+      <a href="/admin/reports" class="a-btn-o py-1.5 text-sm">Download CSV Reports</a>
+      <a href="/admin/analytics" class="a-btn-o py-1.5 text-sm">Live Dashboard</a>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="p-4 bg-[#eef0f8] flex flex-wrap gap-4 items-end">
+    <div class="flex gap-1 rounded-lg bg-white/60 p-1">
+      <% ['all','meta','google'].forEach((p) => { %>
+        <a class="px-3 py-1.5 rounded-md text-sm <%= platform === p ? 'bg-white shadow-sm font-medium text-adm-blue' : 'text-neutral-600 hover:text-neutral-900' %>" href="?platform=<%= p %>&months=<%= months %>">
+          <%= p === 'all' ? 'All Channels' : p[0].toUpperCase() + p.slice(1) %>
+        </a>
+      <% }) %>
+    </div>
+    <div class="flex gap-1 rounded-lg bg-white/60 p-1">
+      <% [3,6,12].forEach((m) => { %>
+        <a class="px-3 py-1.5 rounded-md text-sm <%= months === m ? 'bg-white shadow-sm font-medium text-adm-blue' : 'text-neutral-600 hover:text-neutral-900' %>" href="?platform=<%= platform %>&months=<%= m %>">
+          Last <%= m %> months
+        </a>
+      <% }) %>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MONTHLY KPI SUMMARY ═══════════════════ -->
+<% if (rows.length > 0) {
+  const latest = rows[0];
+  const prev = rows[1] || {};
+  const pctChg = (a, b) => b ? Math.round((a - b) / Math.abs(b) * 100) : null;
+  const chgClass = (n) => n == null ? '' : n >= 0 ? 'text-green-600' : 'text-red-500';
+  const chgLabel = (n) => n == null ? '—' : (n >= 0 ? '▲ ' : '▼ ') + Math.abs(n) + '% vs prev';
+%>
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+  <div class="a-card p-4 text-center">
+    <p class="text-xs text-neutral-500 uppercase tracking-wide">Total Orders</p>
+    <p class="text-2xl font-bold mt-1"><%= latest.total %></p>
+    <p class="text-xs mt-1 <%= chgClass(pctChg(latest.total, prev.total)) %>"><%= chgLabel(pctChg(latest.total, prev.total)) %></p>
+  </div>
+  <div class="a-card p-4 text-center">
+    <p class="text-xs text-neutral-500 uppercase tracking-wide">Delivered</p>
+    <p class="text-2xl font-bold text-green-600 mt-1"><%= latest.delivered %></p>
+    <p class="text-xs mt-1 <%= chgClass(pctChg(latest.delivered, prev.delivered)) %>"><%= chgLabel(pctChg(latest.delivered, prev.delivered)) %></p>
+  </div>
+  <div class="a-card p-4 text-center">
+    <p class="text-xs text-neutral-500 uppercase tracking-wide">RTO %</p>
+    <p class="text-2xl font-bold <%= latest.rtoPct > 30 ? 'text-red-600' : latest.rtoPct > 20 ? 'text-amber-600' : 'text-green-600' %> mt-1"><%= latest.rtoPct %>%</p>
+    <p class="text-xs mt-1 text-neutral-400"><%= latest.cancelled %> cancelled</p>
+  </div>
+  <div class="a-card p-4 text-center">
+    <p class="text-xs text-neutral-500 uppercase tracking-wide">Total Sales</p>
+    <p class="text-xl font-bold mt-1"><%= money(latest.sales) %></p>
+    <p class="text-xs mt-1 <%= chgClass(pctChg(latest.sales, prev.sales)) %>"><%= chgLabel(pctChg(latest.sales, prev.sales)) %></p>
+  </div>
+  <div class="a-card p-4 text-center">
+    <p class="text-xs text-neutral-500 uppercase tracking-wide">Net Sum [A]</p>
+    <p class="text-xl font-bold <%= latest.net < 0 ? 'text-red-600' : 'text-green-700' %> mt-1"><%= money(latest.net) %></p>
+    <p class="text-xs mt-1 text-neutral-400">After costs</p>
+  </div>
+  <div class="a-card p-4 text-center">
+    <p class="text-xs text-neutral-500 uppercase tracking-wide">Net Profit</p>
+    <p class="text-xl font-bold <%= latest.profit < 0 ? 'text-red-600' : 'text-green-700' %> mt-1"><%= money(latest.profit) %></p>
+    <p class="text-xs mt-1 <%= chgClass(pctChg(latest.profit, prev.profit)) %>"><%= chgLabel(pctChg(latest.profit, prev.profit)) %></p>
+  </div>
+</div>
+<% } %>
+
+<!-- ═══════════════════ ORDER + REVENUE TREND CHARTS ═══════════════════ -->
+<div class="grid lg:grid-cols-2 gap-4">
+  <section class="a-card p-5">
+    <h2 class="a-h mb-1">Order Trend</h2>
+    <p class="text-xs text-neutral-400 mb-4">Monthly total vs delivered orders</p>
+    <%- include('partials/bars', {
+      labels: rows.slice().reverse().map((r) => fmtM(r.label || r.label)),
+      a: rows.slice().reverse().map((r) => r.delivered),
+      b: rows.slice().reverse().map((r) => r.total),
+      aName: 'Delivered',
+      bName: 'Total Orders',
+      money: false
+    }) %>
+  </section>
+
+  <section class="a-card p-5">
+    <h2 class="a-h mb-1">Revenue & Profit Trend</h2>
+    <p class="text-xs text-neutral-400 mb-4">Monthly sales revenue vs net profit</p>
+    <%- include('partials/bars', {
+      labels: rows.slice().reverse().map((r) => fmtM(r.label || r.label)),
+      a: rows.slice().reverse().map((r) => Math.max(0, r.profit)),
+      b: rows.slice().reverse().map((r) => r.sales),
+      aName: 'Net Profit',
+      bName: 'Total Sales',
+      money: true
+    }) %>
+  </section>
+</div>
+
+<!-- ═══════════════════ DETAILED MONTHLY PROFITABILITY TABLE ═══════════════════ -->
+<section class="a-card">
+  <div class="p-5 pb-3 border-b border-neutral-100 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h2 class="a-h">Profitability Breakdown</h2>
+      <p class="text-sm text-neutral-500">Month-over-month P&L — positive values in green, negatives in red.</p>
+    </div>
+    <a href="/admin/reports/orders.csv?days=365" class="a-btn-o py-1.5 text-sm">↓ Export CSV</a>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-neutral-50 border-b border-neutral-200">
+          <th class="text-left px-4 py-3 font-semibold text-neutral-700 w-48 sticky left-0 bg-neutral-50">Metric</th>
+          <% rows.forEach((r) => { %>
+            <th class="px-4 py-3 text-right font-semibold text-neutral-700 whitespace-nowrap"><%= fmtM(r.label) %></th>
+          <% }) %>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100">
+
+        <!-- ── ORDERS ─────────────────── -->
+        <tr class="bg-adm-blue/5">
+          <td colspan="<%= rows.length + 1 %>" class="px-4 py-2 text-xs font-bold uppercase tracking-widest text-neutral-500">Orders</td>
+        </tr>
+        <tr class="hover:bg-neutral-50">
+          <td class="px-4 py-3 text-neutral-700 font-medium sticky left-0 bg-white">Total Orders</td>
+          <% rows.forEach((r) => { %><td class="px-4 py-3 text-right font-semibold"><%= r.total %></td><% }) %>
+        </tr>
+        <tr class="hover:bg-neutral-50">
+          <td class="px-4 py-3 text-neutral-600 pl-7 sticky left-0 bg-white">↳ Cancelled</td>
+          <% rows.forEach((r) => { %><td class="px-4 py-3 text-right text-red-500"><%= r.cancelled %></td><% }) %>
+        </tr>
+        <tr class="hover:bg-neutral-50">
+          <td class="px-4 py-3 text-neutral-600 pl-7 sticky left-0 bg-white">↳ RTO %</td>
+          <% rows.forEach((r) => { %>
+            <td class="px-4 py-3 text-right <%= r.rtoPct > 30 ? 'text-red-600 font-semibold' : r.rtoPct > 20 ? 'text-amber-600' : 'text-green-600' %>">
+              <%= r.rtoPct %>%
+            </td>
+          <% }) %>
+        </tr>
+        <tr class="hover:bg-neutral-50">
+          <td class="px-4 py-3 text-neutral-600 pl-7 sticky left-0 bg-white">↳ Delivered</td>
+          <% rows.forEach((r) => { %><td class="px-4 py-3 text-right text-green-600 font-medium"><%= r.delivered %></td><% }) %>
+        </tr>
+
+        <!-- ── REVENUE ─────────────────── -->
+        <tr class="bg-adm-blue/5">
+          <td colspan="<%= rows.length + 1 %>" class="px-4 py-2 text-xs font-bold uppercase tracking-widest text-neutral-500">Revenue & Costs</td>
+        </tr>
+        <tr class="hover:bg-neutral-50">
+          <td class="px-4 py-3 text-neutral-700 font-medium sticky left-0 bg-white">Total Sales</td>
+          <% rows.forEach((r) => { %><td class="px-4 py-3 text-right font-semibold"><%= money(r.sales) %></td><% }) %>
+        </tr>
+        <tr class="hover:bg-neutral-50">
+          <td class="px-4 py-3 text-neutral-600 pl-7 sticky left-0 bg-white">↳ Shipping charged</td>
+          <% rows.forEach((r) => { %><td class="px-4 py-3 text-right text-neutral-500"><%= money(r.sales - r.net - r.courier - r.spend - r.fees) %></td><% }) %>
+        </tr>
+        <tr class="hover:bg-neutral-50">
+          <td class="px-4 py-3 text-neutral-600 pl-7 sticky left-0 bg-white">↳ Courier cost</td>
+          <% rows.forEach((r) => { %><td class="px-4 py-3 text-right text-red-500">-<%= money(r.courier) %></td><% }) %>
+        </tr>
+        <tr class="hover:bg-neutral-50">
+          <td class="px-4 py-3 text-neutral-600 pl-7 sticky left-0 bg-white">↳ Marketing spend</td>
+          <% rows.forEach((r) => { %><td class="px-4 py-3 text-right text-red-500">-<%= money(r.spend) %></td><% }) %>
+        </tr>
+        <tr class="hover:bg-neutral-50">
+          <td class="px-4 py-3 text-neutral-600 pl-7 sticky left-0 bg-white">↳ Gateway fees (est.)</td>
+          <% rows.forEach((r) => { %><td class="px-4 py-3 text-right text-red-500">-<%= money(r.fees) %></td><% }) %>
+        </tr>
+
+        <!-- ── PROFITABILITY ─────────────────── -->
+        <tr class="bg-adm-blue/5">
+          <td colspan="<%= rows.length + 1 %>" class="px-4 py-2 text-xs font-bold uppercase tracking-widest text-neutral-500">Profitability</td>
+        </tr>
+        <tr class="hover:bg-neutral-50 font-medium">
+          <td class="px-4 py-3 text-neutral-700 sticky left-0 bg-white">Net Sum [A]<br><span class="text-xs font-normal text-neutral-400">Sales − courier − mktg − fees</span></td>
+          <% rows.forEach((r) => { %><td class="px-4 py-3 text-right <%= r.net < 0 ? 'text-red-600' : 'text-green-700' %>"><%= money(r.net) %></td><% }) %>
+        </tr>
+        <tr class="hover:bg-neutral-50">
+          <td class="px-4 py-3 text-neutral-600 pl-7 sticky left-0 bg-white">↳ Product cost [B]</td>
+          <% rows.forEach((r) => { %><td class="px-4 py-3 text-right text-red-500">-<%= money(r.prod) %></td><% }) %>
+        </tr>
+        <tr class="bg-gradient-to-r from-adm-blue/5 to-transparent hover:from-adm-blue/10">
+          <td class="px-4 py-4 font-bold text-neutral-900 sticky left-0 bg-transparent">
+            🏁 Net Profit [A+B]
+            <br><span class="text-xs font-normal text-neutral-400">Bottom line</span>
+          </td>
+          <% rows.forEach((r) => { %>
+            <td class="px-4 py-4 text-right text-lg <%= profClass(r.profit) %>">
+              <%= money(r.profit) %>
+              <% if (r.sales > 0) { %>
+                <br><span class="text-xs font-normal text-neutral-400"><%= Math.round(r.profit / r.sales * 100) %>% margin</span>
+              <% } %>
+            </td>
+          <% }) %>
+        </tr>
+
+        <!-- ── OTHER SPENDS ─────────────────── -->
+        <tr class="bg-neutral-50">
+          <td colspan="<%= rows.length + 1 %>" class="px-4 py-2 text-xs font-bold uppercase tracking-widest text-neutral-500">Other Spends</td>
+        </tr>
+        <tr class="hover:bg-neutral-50">
+          <td class="px-4 py-3 text-neutral-600 sticky left-0 bg-white">Return cost (est.)</td>
+          <% rows.forEach((r) => { %><td class="px-4 py-3 text-right text-neutral-400"><%= money(r.courier * (r.rto || 0) / Math.max(r.total, 1)) %></td><% }) %>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="px-5 py-3 text-xs text-neutral-400 border-t">* Product cost uses per-unit cost from catalogue. Gateway fee is estimated at <%= pgFee %>% of online payments. Marketing spend from ad campaigns recorded in the system.</p>
+</section>
+
+<!-- ═══════════════════ TOP PRODUCTS (MONTHLY) ═══════════════════ -->
+<section class="a-card p-5">
+  <div class="flex items-center justify-between mb-5">
+    <div>
+      <h2 class="a-h">Product Performance (Current Month)</h2>
+      <p class="text-sm text-neutral-500">Units sold, revenue and margin for the ongoing month.</p>
+    </div>
+    <a href="/admin/reports/product-performance.csv?days=30" class="a-btn-o py-1.5 text-sm">↓ Export</a>
+  </div>
+  <% if (productPerf && productPerf.length) { %>
+    <div class="overflow-x-auto">
+      <table class="a-table min-w-[700px]">
+        <thead>
+          <tr>
+            <th class="text-left">Product</th>
+            <th>Units</th>
+            <th>Revenue</th>
+            <th>Product Cost</th>
+            <th>Gross Margin</th>
+            <th>RTO units</th>
+            <th>Delivered</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% productPerf.forEach((p) => {
+            const margin = p.revenue - p.product_cost;
+            const marginPct = p.revenue ? Math.round(margin / p.revenue * 100) : 0;
+          %>
+          <tr>
+            <td class="font-medium"><%= p.product %></td>
+            <td><%= p.units %></td>
+            <td><%= money(p.revenue) %></td>
+            <td class="text-red-500">-<%= money(p.product_cost) %></td>
+            <td class="<%= margin < 0 ? 'text-red-600 font-semibold' : 'text-green-700 font-semibold' %>">
+              <%= money(margin) %>
+              <span class="text-xs font-normal text-neutral-400">(<%= marginPct %>%)</span>
+            </td>
+            <td class="text-red-500"><%= p.rto_units %></td>
+            <td class="text-green-600"><%= p.delivered_units %></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <p class="text-sm text-neutral-400 py-8 text-center">No product sales data for this period yet.</p>
+  <% } %>
+</section>
+
+<!-- ═══════════════════ DOWNLOAD SECTION ═══════════════════ -->
+<section class="a-card p-5">
+  <h2 class="a-h mb-4">Download Monthly Reports</h2>
+  <p class="text-sm text-neutral-500 mb-5">Download CSV reports for deeper analysis in Excel or Google Sheets.</p>
+  <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <% [
+      { type: 'orders', label: 'Order Report', desc: 'Day-wise orders, revenue and expenses', icon: 'M21 8l-9-5-9 5v8l9 5 9-5z' },
+      { type: 'product-performance', label: 'Product Performance', desc: 'Units, revenue, margin and RTO by product', icon: 'M4 20V10M10 20V4M16 20v-8M22 20H2' },
+      { type: 'order-reconciliation', label: 'Order Reconciliation', desc: 'Payment, COD and settlement status', icon: 'M9 14l6-6m-5-2h.01M15 10h.01M3 7h16a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z' },
+      { type: 'cashflow', label: 'Cash Flow', desc: 'Outstanding COD and settlements', icon: 'M12 2l3 6.5 7 .9-5.2 4.8 1.4 7L12 17.8 5.8 21.2l1.4-7L2 9.4l7-.9z' }
+    ].forEach((rep) => { %>
+    <form method="get" action="/admin/reports/<%= rep.type %>.csv" class="border border-neutral-200 rounded-xl p-4 hover:border-adm-blue/40 hover:bg-adm-blue/5 transition-colors">
+      <div class="flex items-start gap-3 mb-3">
+        <span class="w-8 h-8 rounded-lg bg-adm-blue/10 flex items-center justify-center shrink-0">
+          <svg class="w-4 h-4 text-adm-blue" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="<%= rep.icon %>"/></svg>
+        </span>
+        <div>
+          <p class="font-semibold text-sm"><%= rep.label %></p>
+          <p class="text-xs text-neutral-500 mt-0.5"><%= rep.desc %></p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <select class="a-in text-xs flex-1" name="days">
+          <option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="180">Last 6 months</option>
+          <option value="365">Last year</option>
+        </select>
+        <button class="a-btn !px-3 !py-1.5 text-xs">↓</button>
+      </div>
+    </form>
+    <% }) %>
+  </div>
+  <p class="mt-4 text-xs text-neutral-400">
+    <a href="/admin/reports" class="text-adm-blue hover:underline">View all available reports →</a>
+  </p>
+</section>
+
+<%- include('partials/bottom') %>

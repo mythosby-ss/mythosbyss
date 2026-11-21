@@ -1,0 +1,102 @@
+<%- include('partials/top') %>
+<% const v = p ? p.variants : [{ id: '', label: '', sku: '', price: '', mrp: '', cost: '', stock: 0, lowStock: 10, pack: '' }]; %>
+<form method="post" action="/admin/catalogue/save" class="space-y-6">
+  <input type="hidden" name="_csrf" value="<%= csrf %>"><% if (p) { %><input type="hidden" name="id" value="<%= p.id %>"><% } %>
+  <section class="a-card p-5 grid md:grid-cols-2 gap-4">
+    <h2 class="a-h md:col-span-2">Basic details</h2>
+    <div class="md:col-span-2"><label class="a-lbl" for="name">Product name *</label><input class="a-in" id="name" name="name" required value="<%= p ? p.name : '' %>"></div>
+    <div><label class="a-lbl" for="category">Category *</label><select class="a-in" id="category" name="category" required><option value="">Choose...</option><% categories.forEach((c) => { %><option value="<%= c.slug %>" <%= p && p.category === c.slug ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
+    <div><label class="a-lbl" for="status">Visibility</label><select class="a-in" id="status" name="status"><option value="published" <%= !p || p.status === 'published' ? 'selected' : '' %>>Published (visible on store)</option><option value="draft" <%= p && p.status === 'draft' ? 'selected' : '' %>>Draft (hidden)</option></select></div>
+    <div class="md:col-span-2"><label class="a-lbl" for="description">Description</label><textarea class="a-in" id="description" name="description" rows="4"><%= p ? p.description : '' %></textarea></div>
+    <div class="md:col-span-2"><label class="a-lbl" for="features">Key features (one per line)</label><textarea class="a-in" id="features" name="features" rows="3"><%= p ? p.features.join('\n') : '' %></textarea></div>
+    <div><label class="a-lbl" for="badge">Badge (optional)</label><input class="a-in" id="badge" name="badge" value="<%= p && p.badge ? p.badge : '' %>" placeholder="e.g. Premium range"></div>
+    <label class="flex items-center gap-2 pt-6 text-sm"><input type="checkbox" name="is_new" value="1" <%= p && p.isNew ? 'checked' : '' %>> Show in New arrivals</label>
+  </section>
+
+  <section class="a-card p-5">
+    <div class="flex items-center justify-between mb-3"><h2 class="a-h">Variants, pricing &amp; stock</h2><button type="button" id="add-variant" class="a-btn-o">+ Add variant</button></div>
+    <p class="text-xs text-neutral-500 mb-3">Discount % is calculated from MRP and selling price. Cost price is private (used for profit reports).</p>
+    <div id="variant-rows" class="space-y-3">
+      <% v.forEach((x) => { %>
+      <div data-variant class="grid grid-cols-2 md:grid-cols-9 gap-2 items-end border border-neutral-200 rounded-lg p-3">
+        <input type="hidden" name="v_id" value="<%= x.id %>">
+        <div class="md:col-span-2"><label class="a-lbl">Size / variant</label><input class="a-in" name="v_label" value="<%= x.label %>" placeholder="e.g. 1000 ml"></div>
+        <div class="md:col-span-2"><label class="a-lbl">SKU</label><input class="a-in" name="v_sku" value="<%= x.sku %>" placeholder="e.g. MB-NK-N-101"></div>
+        <div><label class="a-lbl">Price</label><input class="a-in" type="number" step="0.01" min="0" name="v_price" value="<%= x.price %>"></div>
+        <div><label class="a-lbl">MRP</label><input class="a-in" type="number" step="0.01" min="0" name="v_mrp" value="<%= x.mrp %>"></div>
+        <div><label class="a-lbl">Cost</label><input class="a-in" type="number" step="0.01" min="0" name="v_cost" value="<%= x.cost %>"></div>
+        <div><label class="a-lbl">Stock</label><input class="a-in" type="number" min="0" name="v_stock" value="<%= x.stock %>"></div>
+        <div class="flex gap-1 items-end"><div class="flex-1"><label class="a-lbl">Alert</label><input class="a-in" type="number" min="0" name="v_low" value="<%= x.lowStock ?? 10 %>"></div><button type="button" data-remove-variant class="a-btn-r px-2" aria-label="Remove variant">&times;</button></div>
+        <input type="hidden" name="v_pack" value="<%= x.pack || '' %>">
+      </div>
+      <% }) %>
+    </div>
+    <template id="variant-tpl"><div data-variant class="grid grid-cols-2 md:grid-cols-9 gap-2 items-end border border-neutral-200 rounded-lg p-3"><input type="hidden" name="v_id" value="">
+      <div class="md:col-span-2"><label class="a-lbl">Size / variant</label><input class="a-in" name="v_label"></div><div class="md:col-span-2"><label class="a-lbl">SKU</label><input class="a-in" name="v_sku"></div>
+      <div><label class="a-lbl">Price</label><input class="a-in" type="number" step="0.01" min="0" name="v_price"></div><div><label class="a-lbl">MRP</label><input class="a-in" type="number" step="0.01" min="0" name="v_mrp"></div><div><label class="a-lbl">Cost</label><input class="a-in" type="number" step="0.01" min="0" name="v_cost"></div><div><label class="a-lbl">Stock</label><input class="a-in" type="number" min="0" name="v_stock" value="0"></div>
+      <div class="flex gap-1 items-end"><div class="flex-1"><label class="a-lbl">Alert</label><input class="a-in" type="number" min="0" name="v_low" value="10"></div><button type="button" data-remove-variant class="a-btn-r px-2" aria-label="Remove variant">&times;</button></div><input type="hidden" name="v_pack" value=""></div></template>
+  </section>
+
+  <section class="a-card p-5 grid md:grid-cols-2 gap-4">
+    <h2 class="a-h md:col-span-2">SEO</h2>
+    <div class="md:col-span-2"><label class="a-lbl" for="slug">URL slug</label><div class="flex items-center gap-2"><span class="text-sm text-neutral-500">/products/</span><input class="a-in" id="slug" name="slug" value="<%= p ? p.slug : '' %>" placeholder="auto from name"></div><% if (p) { %><p class="text-xs text-neutral-500 mt-1">Changing the URL keeps the old link working with a 301 redirect.</p><% } %></div>
+    <div class="md:col-span-2"><label class="a-lbl" for="seo_title">SEO title <span class="text-neutral-400">(<span id="c1">0</span>/60)</span></label><input class="a-in" id="seo_title" name="seo_title" data-count="c1" value="<%= p && p.seoTitle ? p.seoTitle : '' %>"></div>
+    <div class="md:col-span-2"><label class="a-lbl" for="seo_desc">Meta description <span class="text-neutral-400">(<span id="c2">0</span>/160)</span></label><textarea class="a-in" id="seo_desc" name="seo_desc" rows="2" data-count="c2"><%= p && p.seoDesc ? p.seoDesc : '' %></textarea></div>
+    <div><label class="a-lbl" for="seo_keywords">Keywords (comma separated)</label><input class="a-in" id="seo_keywords" name="seo_keywords" value="<%= p && p.seoKeywords ? p.seoKeywords : '' %>"></div>
+    <div><label class="a-lbl" for="image_alt">Image alt text</label><input class="a-in" id="image_alt" name="image_alt" value="<%= p ? p.imageAlt : '' %>" placeholder="Describe the main image"></div>
+  </section>
+  <div class="flex gap-3"><button class="a-btn px-6 py-3">Save product</button><a class="a-btn-o py-3" href="/admin/catalogue">Cancel</a></div>
+</form>
+
+<% if (p) { %>
+<section class="a-card p-5">
+  <h2 class="a-h mb-1">Images</h2>
+  <p class="text-sm text-neutral-500 mb-4"><%= driveOn ? 'Uploaded files are stored in Google Drive under "' + p.categoryName + '".' : 'File uploads are saved on this server because Google Drive upload credentials are not configured.' %> You can still add a public Google Drive share link below without credentials; set sharing to "Anyone with the link" (Viewer). The first image is the main image.</p>
+  <div class="flex flex-wrap gap-4 mb-5">
+    <% p.rawImages.forEach((raw, i) => { %><div class="w-36"><img src="<%= imgUrl(raw) %>" alt="" class="w-36 h-36 object-cover rounded-lg border bg-neutral-100"><div class="flex gap-1 mt-1"><% if (i) { %><form method="post" action="/admin/catalogue/<%= p.id %>/images/<%= i %>/primary"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-o !px-2 !py-1 text-xs">Make main</button></form><% } else { %><span class="pill pill-green">Main</span><% } %><form method="post" action="/admin/catalogue/<%= p.id %>/images/<%= i %>/remove"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-r !px-2 !py-1 text-xs">Remove</button></form></div></div><% }) %>
+    <% if (!p.rawImages.length) { %><p class="text-sm text-amber-700">No images yet.</p><% } %>
+  </div>
+  <form method="post" action="/admin/catalogue/<%= p.id %>/images" enctype="multipart/form-data" class="grid md:grid-cols-2 gap-4 items-end">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div><label class="a-lbl" for="files">Upload images (JPG, PNG, WEBP, max 5 MB each)</label><input class="a-in" id="files" type="file" name="files" accept="image/jpeg,image/png,image/webp" multiple></div>
+    <div><label class="a-lbl" for="link">...or paste a Google Drive image file link (set to "Anyone with the link")</label><input class="a-in" id="link" name="link" placeholder="https://drive.google.com/file/d/FILE_ID/view"></div>
+    <div><button class="a-btn">Add images</button></div>
+  </form>
+</section>
+<section class="a-card p-5 space-y-5">
+  <div>
+    <h2 class="a-h mb-1">Images for each variant</h2>
+    <p class="text-sm text-neutral-500">Each size or variant can have its own gallery. If a variant has no images, the product images above will be shown instead. Save variant changes before adding images.</p>
+  </div>
+  <% p.variants.forEach((variant) => { %>
+    <div class="border border-neutral-200 rounded-xl p-4">
+      <h3 class="font-semibold"><%= variant.label %> <span class="text-xs text-neutral-500"><%= variant.sku %></span></h3>
+      <div class="flex flex-wrap gap-3 mt-3">
+        <% variant.rawImages.forEach((raw, i) => { %>
+          <div class="w-28">
+            <img src="<%= imgUrl(raw) %>" alt="" class="w-28 h-28 object-cover rounded-lg border bg-neutral-100">
+            <div class="flex gap-1 mt-1">
+              <% if (i) { %>
+                <form method="post" action="/admin/catalogue/<%= p.id %>/variants/<%= variant.id %>/images/<%= i %>/primary">
+                  <input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-o !px-2 !py-1 text-xs">Make main</button>
+                </form>
+              <% } else { %><span class="pill pill-green">Main</span><% } %>
+              <form method="post" action="/admin/catalogue/<%= p.id %>/variants/<%= variant.id %>/images/<%= i %>/remove">
+                <input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-r !px-2 !py-1 text-xs">Remove</button>
+              </form>
+            </div>
+          </div>
+        <% }) %>
+        <% if (!variant.rawImages.length) { %><p class="text-sm text-amber-700">No variant-specific images; product images are used on the store.</p><% } %>
+      </div>
+      <form method="post" action="/admin/catalogue/<%= p.id %>/variants/<%= variant.id %>/images" enctype="multipart/form-data" class="grid md:grid-cols-2 gap-3 items-end mt-4">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <div><label class="a-lbl" for="variant-files-<%= variant.id %>">Upload variant images (JPG, PNG, WEBP)</label><input class="a-in" id="variant-files-<%= variant.id %>" type="file" name="files" accept="image/jpeg,image/png,image/webp" multiple></div>
+        <div><label class="a-lbl" for="variant-link-<%= variant.id %>">Or paste a public image link</label><input class="a-in" id="variant-link-<%= variant.id %>" name="link" placeholder="Drive image file link or HTTPS URL"></div>
+        <div><button class="a-btn">Add images to <%= variant.label %></button></div>
+      </form>
+    </div>
+  <% }) %>
+</section>
+<% } %>
+<%- include('partials/bottom') %>

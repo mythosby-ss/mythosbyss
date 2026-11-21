@@ -1,0 +1,10 @@
+<%- include('partials/top') %>
+<div class="a-card">
+  <nav class="flex gap-1 px-3 border-b border-neutral-200"><a class="a-tab <%= !blocked ? 'a-tab-on' : '' %>" href="?">Purchasing customers</a><a class="a-tab <%= blocked ? 'a-tab-on' : '' %>" href="?tab=blocked">Blocked</a></nav>
+  <form method="get" class="p-4 flex gap-3 items-end"><% if (blocked) { %><input type="hidden" name="tab" value="blocked"><% } %><div class="flex-1 max-w-md"><label class="a-lbl" for="q">Search name or phone</label><input class="a-in" id="q" name="q" value="<%= q %>"></div><button class="a-btn">Search</button><a class="a-btn-o" href="/admin/reports/customers.csv?days=365">Download</a></form>
+  <div class="overflow-x-auto"><table class="a-table min-w-[800px]"><thead><tr><th>Name</th><th>Phone (WhatsApp)</th><th>Customer since</th><th>Orders</th><th>Delivered</th><th>RTO</th><th>Revenue</th><th></th></tr></thead><tbody>
+    <% list.forEach((c) => { %><tr><td><%= c.name || '-' %></td><td><%= c.phone %></td><td><%= d(c.created_at) %></td><td><%= c.orders %></td><td><%= c.delivered || 0 %></td><td class="<%= c.rto ? 'text-red-600' : '' %>"><%= c.rto || 0 %></td><td><%= money(c.revenue) %></td>
+      <td class="whitespace-nowrap"><a class="text-adm-blue mr-3" href="/admin/customers/<%= c.id %>">Details</a><form method="post" action="/admin/customers/<%= c.id %>/block" class="inline" data-confirm="<%= blocked ? 'Unblock' : 'Block' %> this customer?"><input type="hidden" name="_csrf" value="<%= csrf %>"><% if (!blocked) { %><input type="hidden" name="block" value="1"><% } %><button class="<%= blocked ? 'a-btn-o' : 'a-btn-r' %> !py-1"><%= blocked ? 'Unblock' : 'Block' %></button></form></td></tr><% }) %>
+    <% if (!list.length) { %><tr><td colspan="8" class="text-center py-8 text-neutral-500">No customers.</td></tr><% } %></tbody></table></div>
+</div>
+<%- include('partials/bottom') %>

@@ -1,4 +1,5 @@
 <%- include('partials/header') %>
+<script type="application/json" id="mb-event"><%- JSON.stringify({ name: 'begin_checkout', value: cart.subtotal, items: cart.items.map((i) => ({ id: i.sku, name: i.product.name, variant: i.variant.label, price: i.unit, qty: i.qty })) }).replace(/</g, '\\u003c') %></script>
 <div class="container-x py-10">
   <h1 class="text-4xl font-semibold">Checkout</h1>
   <form id="checkout-form" novalidate class="mt-8 grid lg:grid-cols-[1fr_400px] gap-10"
@@ -11,17 +12,17 @@
       <section aria-labelledby="c-h">
         <h2 id="c-h" class="text-2xl font-semibold">Contact &amp; delivery</h2>
         <div class="mt-5 grid sm:grid-cols-2 gap-4">
-          <div class="sm:col-span-2"><label class="label" for="name">Full name</label><input class="field" id="name" name="name" autocomplete="name" required><p class="err text-xs text-red-600 mt-1" data-err="name"></p></div>
-          <div><label class="label" for="email">Email</label><input class="field" id="email" name="email" type="email" autocomplete="email" required><p class="err text-xs text-red-600 mt-1" data-err="email"></p></div>
-          <div><label class="label" for="phone">Mobile number</label><input class="field" id="phone" name="phone" inputmode="numeric" maxlength="10" autocomplete="tel-national" required><p class="err text-xs text-red-600 mt-1" data-err="phone"></p></div>
-          <div class="sm:col-span-2"><label class="label" for="line1">Address</label><input class="field" id="line1" name="line1" autocomplete="address-line1" placeholder="House no., building, street" required><p class="err text-xs text-red-600 mt-1" data-err="line1"></p></div>
-          <div class="sm:col-span-2"><label class="label" for="line2">Landmark <span class="text-neutral-500 font-normal">(optional)</span></label><input class="field" id="line2" name="line2" autocomplete="address-line2"></div>
-          <div><label class="label" for="pincode">Pincode</label><input class="field" id="pincode" name="pincode" inputmode="numeric" maxlength="6" autocomplete="postal-code" required><p class="err text-xs text-red-600 mt-1" data-err="pincode"></p></div>
-          <div><label class="label" for="city">City</label><input class="field" id="city" name="city" autocomplete="address-level2" required><p class="err text-xs text-red-600 mt-1" data-err="city"></p></div>
+          <div class="sm:col-span-2"><label class="label" for="name">Full name</label><input class="field" id="name" name="name" autocomplete="name" required value="<%= profile.name || '' %>"><p class="err text-xs text-red-600 mt-1" data-err="name"></p></div>
+          <div><label class="label" for="email">Email</label><input class="field" id="email" name="email" type="email" autocomplete="email" required value="<%= profile.email || '' %>"><p class="err text-xs text-red-600 mt-1" data-err="email"></p></div>
+          <div><label class="label" for="phone">WhatsApp number (verified)</label><input class="field bg-neutral-50" id="phone" value="+91 <%= profile.phone %>" readonly aria-readonly="true"></div>
+          <div class="sm:col-span-2"><label class="label" for="line1">Address</label><input class="field" id="line1" name="line1" autocomplete="address-line1" placeholder="House no., building, street" required value="<%= saved.line1 || '' %>"><p class="err text-xs text-red-600 mt-1" data-err="line1"></p></div>
+          <div class="sm:col-span-2"><label class="label" for="line2">Landmark <span class="text-neutral-500 font-normal">(optional)</span></label><input class="field" id="line2" name="line2" autocomplete="address-line2" value="<%= saved.line2 || '' %>"></div>
+          <div><label class="label" for="pincode">Pincode</label><input class="field" id="pincode" name="pincode" inputmode="numeric" maxlength="6" autocomplete="postal-code" required value="<%= saved.pincode || '' %>"><p class="err text-xs text-red-600 mt-1" data-err="pincode"></p></div>
+          <div><label class="label" for="city">City</label><input class="field" id="city" name="city" autocomplete="address-level2" required value="<%= saved.city || '' %>"><p class="err text-xs text-red-600 mt-1" data-err="city"></p></div>
           <div class="sm:col-span-2"><label class="label" for="state">State</label>
             <select class="field" id="state" name="state" autocomplete="address-level1" required>
               <option value="">Select state</option>
-              <% states.forEach((s) => { %><option value="<%= s %>"><%= s %></option><% }) %>
+              <% states.forEach((s) => { %><option value="<%= s %>" <%= saved.state === s ? 'selected' : '' %>><%= s %></option><% }) %>
             </select><p class="err text-xs text-red-600 mt-1" data-err="state"></p></div>
           <div class="sm:col-span-2"><label class="label" for="note">Order note <span class="text-neutral-500 font-normal">(optional)</span></label><textarea class="field" id="note" name="note" rows="2" maxlength="300"></textarea></div>
         </div>
@@ -60,6 +61,7 @@
       </ul>
       <dl class="mt-4 space-y-2 text-sm border-t border-neutral-300 pt-4">
         <div class="flex justify-between"><dt>Subtotal</dt><dd><%= money(cart.subtotal) %></dd></div>
+        <% if (discount) { %><div class="flex justify-between text-green-700"><dt>Coupon <%= couponCode %></dt><dd>&minus; <%= money(discount) %></dd></div><% } %>
         <div class="flex justify-between"><dt>Shipping</dt><dd><%= cart.shipping ? money(cart.shipping) : 'Free' %></dd></div>
         <div class="flex justify-between hidden" data-cod-fee-row><dt>COD fee</dt><dd><%= money(codFee) %></dd></div>
         <div class="flex justify-between text-base font-semibold border-t border-neutral-300 pt-3"><dt>Total</dt><dd data-total><%= money(pricing.prepaid.total) %></dd></div>

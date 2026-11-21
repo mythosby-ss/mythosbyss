@@ -1,0 +1,7 @@
+<form method="get" class="flex flex-wrap items-end gap-3">
+  <% Object.entries(hidden || {}).forEach(([k, v]) => { if (v) { %><input type="hidden" name="<%= k %>" value="<%= v %>"><% } }) %>
+  <div><label class="a-lbl" for="from">From</label><input class="a-in" type="date" id="from" name="from" value="<%= r.from %>"></div>
+  <div><label class="a-lbl" for="to">To</label><input class="a-in" type="date" id="to" name="to" value="<%= r.to %>"></div>
+  <% if (typeof extra !== 'undefined') { %><%- extra %><% } %>
+  <button class="a-btn">Apply</button>
+</form>

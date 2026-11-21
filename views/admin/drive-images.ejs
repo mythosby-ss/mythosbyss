@@ -1,0 +1,64 @@
+<%- include('partials/top') %>
+<% if (!configured) { %>
+<section class="a-card p-6 max-w-2xl space-y-3 text-sm">
+  <h2 class="a-h">Connect Google Drive first</h2>
+  <p class="text-neutral-600">Product images are read from your Google Drive product folder. Connect it once under <b>Plugins → Google Drive</b> (it needs a free API key and the folder link).</p>
+  <a class="a-btn" href="/admin/plugins#googledrive">Open Plugins</a>
+</section>
+<% } else if (error) { %>
+<section class="a-card p-6 max-w-2xl space-y-3 text-sm">
+  <h2 class="a-h text-red-700">Could not read your Drive folder</h2>
+  <p class="text-neutral-700"><%= error %></p>
+  <div class="flex gap-2"><a class="a-btn-o" href="/admin/catalogue/drive?refresh=1">Try again</a><a class="a-btn-o" href="/admin/plugins#googledrive">Check Drive settings</a></div>
+</section>
+<% } else { %>
+<% const linked = folders.filter((f) => f.productId).length; const suggested = folders.filter((f) => !f.productId && f.suggested).length; %>
+<div class="flex flex-wrap items-center gap-3 text-sm">
+  <div class="kpi !p-4 !flex-row items-center gap-3"><b class="!text-xl"><%= folders.length %></b><span>Drive folders</span></div>
+  <div class="kpi !p-4 !flex-row items-center gap-3"><b class="!text-xl text-green-700"><%= linked %></b><span>linked to a product</span></div>
+  <div class="kpi !p-4 !flex-row items-center gap-3"><b class="!text-xl text-amber-600"><%= suggested %></b><span>suggested, please check</span></div>
+  <a class="a-btn-o ml-auto" href="/admin/catalogue/drive?refresh=1">Reload from Drive</a>
+</div>
+
+<form method="post" action="/admin/catalogue/drive" class="a-card">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <div class="p-4 border-b border-neutral-100 text-sm text-neutral-600">
+    Choose which product each Drive folder belongs to. All images in the folder become that product's images, in file-name order (the first one is the main photo).
+    Suggestions are pre-selected and marked <span class="pill pill-amber">suggested</span>. Pick <i>Not linked</i> for folders you don't want to use yet.
+  </div>
+  <% if (!folders.length) { %>
+    <p class="p-8 text-center text-neutral-500 text-sm">No sub-folders found in your Drive product folder.</p>
+  <% } %>
+  <div class="divide-y divide-neutral-100">
+    <% folders.forEach((f) => { const sel = f.productId || f.suggested; %>
+    <div class="p-4 flex flex-wrap items-center gap-4">
+      <input type="hidden" name="folder" value="<%= f.id %>">
+      <div class="flex gap-1.5 shrink-0">
+        <% f.images.slice(0, 4).forEach((im) => { %>
+          <img src="/media/<%= im.id %>?sz=sm" alt="<%= im.name %>" loading="lazy" class="w-14 h-14 rounded-lg object-cover bg-neutral-100 border border-neutral-200">
+        <% }) %>
+        <% if (!f.images.length) { %><div class="w-14 h-14 rounded-lg bg-neutral-100 border border-dashed border-neutral-300 grid place-items-center text-[10px] text-neutral-400">empty</div><% } %>
+      </div>
+      <div class="min-w-[160px] flex-1">
+        <p class="font-semibold"><%= f.name %></p>
+        <p class="text-xs text-neutral-500"><%= f.images.length %> image<%= f.images.length === 1 ? '' : 's' %>
+          <% if (f.productId) { %> &middot; <span class="pill pill-green">linked</span><% } else if (f.suggested) { %> &middot; <span class="pill pill-amber">suggested</span><% } %></p>
+      </div>
+      <div class="w-full sm:w-[420px]">
+        <label class="sr-only" for="p-<%= f.id %>">Product for <%= f.name %></label>
+        <select class="a-in" id="p-<%= f.id %>" name="product">
+          <option value="">Not linked</option>
+          <% products.forEach((p) => { %><option value="<%= p.id %>" <%= String(sel) === String(p.id) ? 'selected' : '' %>><%= p.name %><%= p.status !== 'published' ? ' (hidden)' : '' %></option><% }) %>
+        </select>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+  <div class="p-4 border-t border-neutral-100 bg-neutral-50 rounded-b-xl flex flex-wrap items-center gap-4">
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="replace" value="1" checked> Replace each linked product's current images with the Drive images</label>
+    <button class="a-btn ml-auto px-6">Save links &amp; import images</button>
+  </div>
+</form>
+<p class="text-xs text-neutral-500">Added new photos to a folder in Drive? Click <b>Reload from Drive</b>, then <b>Save</b> again. A folder for a product that isn't in the catalogue yet? <a class="text-adm-blue" href="/admin/catalogue/new">Create the product</a> first.</p>
+<% } %>
+<%- include('partials/bottom') %>

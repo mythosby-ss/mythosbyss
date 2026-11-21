@@ -1,0 +1,11 @@
+<%- include('partials/top') %>
+<div class="grid grid-cols-3 gap-4"><a class="kpi" href="?f="><b><%= counts.all %></b><span>All SKUs</span></a><a class="kpi" href="?f=low"><b class="!text-amber-600"><%= counts.low %></b><span>Low stock</span></a><a class="kpi" href="?f=out"><b class="!text-red-600"><%= counts.out %></b><span>Out of stock</span></a></div>
+<form method="post" action="/admin/inventory" class="a-card">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <div class="p-4 flex items-center justify-between"><p class="text-sm text-neutral-600">Edit stock and the low-stock alert level, then save. Stock is reduced automatically when orders are placed and restored when they are cancelled or returned.</p><button class="a-btn">Save changes</button></div>
+  <div class="overflow-x-auto"><table class="a-table min-w-[640px]"><thead><tr><th>Product</th><th>Size</th><th>SKU</th><th>Stock</th><th>Alert at</th><th>Status</th></tr></thead><tbody>
+    <% list.forEach((v) => { %><tr><td><a class="hover:text-adm-blue" href="/admin/catalogue/<%= v.product_id %>/edit"><%= v.pname %></a></td><td><%= v.label %></td><td class="text-xs"><%= v.sku %></td>
+      <td><input type="hidden" name="id" value="<%= v.id %>"><input class="a-in !w-24" type="number" min="0" name="stock" value="<%= v.stock %>" aria-label="Stock for <%= v.sku %>"></td><td><input class="a-in !w-20" type="number" min="0" name="low" value="<%= v.low_stock %>" aria-label="Alert level for <%= v.sku %>"></td>
+      <td><%- v.stock <= 0 ? pill('Out of stock', 'red') : v.stock <= v.low_stock ? pill('Low stock', 'amber') : pill('In stock', 'green') %></td></tr><% }) %></tbody></table></div>
+</form>
+<%- include('partials/bottom') %>

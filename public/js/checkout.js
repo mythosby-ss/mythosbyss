@@ -32,7 +32,8 @@
     e.preventDefault(); showErrors(); showFormError(''); setBusy(true);
     const body = Object.fromEntries(new FormData(form).entries());
     try {
-      const { data } = await post('/checkout/place', body);
+      const { status, data } = await post('/checkout/place', body);
+      if (status === 401) return (window.location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search));
       if (!data.ok) { showErrors(data.errors); showFormError(data.message); return setBusy(false); }
       if (data.redirect) return (window.location.href = data.redirect); // COD
       openRazorpay(data);

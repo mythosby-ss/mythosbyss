@@ -1,0 +1,55 @@
+<%- include('partials/top') %>
+<%
+  const field = (k, label, ph, hint, opts = {}) => { %>
+    <div class="<%= opts.wide ? 'md:col-span-2' : '' %>">
+      <label class="a-lbl" for="<%= k %>"><%= label %><% if (opts.secret && has[k]) { %> <span class="pill pill-green text-[10px] ml-1">Saved</span><% } %></label>
+      <input class="a-in <%= opts.mono !== false ? 'font-mono' : '' %>" id="<%= k %>" name="<%= k %>" <%= opts.secret ? 'type=password autocomplete=off' : '' %>
+        value="<%= s[k] || '' %>" placeholder="<%= opts.secret && has[k] ? 'Saved. Leave blank to keep it' : ph %>">
+      <% if (opts.secret && has[k]) { %><label class="text-xs text-neutral-500 flex items-center gap-1.5 mt-1"><input type="checkbox" name="<%= k %>_clear" value="1"> Remove saved value</label><% } %>
+      <% if (hint) { %><p class="text-xs text-neutral-400 mt-1"><%- hint %></p><% } %>
+    </div>
+<% } %>
+<form method="post" action="/admin/settings/marketing" class="space-y-6 max-w-4xl">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+
+  <section class="a-card p-5 space-y-4">
+    <div class="flex flex-wrap items-start gap-3">
+      <div class="flex-1 min-w-[240px]"><h2 class="a-h">Meta (Facebook &amp; Instagram)</h2><p class="text-sm text-neutral-500 mt-1">The Pixel tracks visits, add-to-cart, checkout and purchases so Meta can optimise your ads. Ad spend for the home page comes from <a class="text-adm-blue" href="/admin/plugins#metaads">Plugins → Meta Ads</a>.</p></div>
+      <button class="a-btn">Save</button>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <% field('mk_pixel_id', 'Pixel ID', 'Enter your Pixel ID (numbers only)', 'Events Manager → Data sources → your Pixel → ID'); %>
+      <% field('mk_capi_token', 'Conversions API access token', 'Paste the access token', 'Events Manager → your Pixel → Settings → <i>Generate access token</i>. Sends purchases from the server too, so ad blockers can\'t hide them.', { secret: true }); %>
+      <% field('mk_catalogue_id', 'Catalogue ID', 'Enter your Commerce Manager catalogue ID', 'Commerce Manager → your catalogue → Settings'); %>
+      <% field('mk_fb_page_id', 'Facebook Page ID', 'Enter your Page ID', 'Your Page → About → Page transparency'); %>
+      <% field('mk_fb_business_id', 'Business Manager ID', 'Enter your Business Manager ID', 'business.facebook.com → Business settings → Business info'); %>
+      <% field('mk_report_link', 'Marketing report link', 'Paste a link to your ads report (https://…)', 'For example a saved Ads Manager report. Opens from the home page.', { mono: false }); %>
+    </div>
+    <div class="rounded-lg bg-neutral-50 border border-neutral-200 p-4 text-sm space-y-2">
+      <p class="font-medium">Product catalogue feed (for Meta Catalogue and Google Merchant Center)</p>
+      <div class="flex gap-2"><input class="a-in font-mono text-xs" id="feed-url" readonly value="<%= feedUrl %>"><button type="button" class="a-btn-o whitespace-nowrap" data-copy="#feed-url">Copy</button></div>
+      <p class="text-xs text-neutral-500">Updates automatically with your catalogue (prices, stock, images). In <b>Commerce Manager → Catalogue → Data sources → Data feed</b>, choose <i>Scheduled feed</i>, paste this URL and set it to update daily. Use the same URL in <b>Merchant Center → Products → Feeds</b>.</p>
+    </div>
+  </section>
+
+  <section class="a-card p-5 space-y-4">
+    <div class="flex flex-wrap items-start gap-3">
+      <div class="flex-1 min-w-[240px]"><h2 class="a-h">Google</h2><p class="text-sm text-neutral-500 mt-1">Analytics, Ads conversion tracking, Tag Manager and Search Console. Fill only what you use. Ad spend for the home page comes from <a class="text-adm-blue" href="/admin/plugins#googleads">Plugins → Google Ads</a>.</p></div>
+      <button class="a-btn">Save</button>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <% field('mk_ga4_id', 'Google Analytics 4 Measurement ID', 'Starts with G-', 'Analytics → Admin → Data streams → your web stream'); %>
+      <% field('mk_ga4_api_secret', 'GA4 Measurement Protocol API secret', 'Paste the API secret', 'Same data stream → Measurement Protocol API secrets → Create', { secret: true }); %>
+      <% field('mk_gads_id', 'Google Ads tag ID', 'Starts with AW-', 'Google Ads → Goals → Conversions → your action → Tag setup'); %>
+      <% field('mk_gmc_id', 'Merchant Center ID', 'Enter your Merchant Center ID', 'Shown top-right in merchants.google.com'); %>
+      <% field('mk_gads_purchase_label', 'Purchase conversion label', 'The part after the / in the send_to value', 'From the Purchase conversion\'s event snippet: <code>send_to: \'AW-123/<b>THIS_PART</b>\'</code>'); %>
+      <% field('mk_gads_a2c_label', 'Add-to-cart conversion label', 'Optional', ''); %>
+      <% field('mk_gads_view_label', 'View item conversion label', 'Optional', ''); %>
+      <% field('mk_gtm_id', 'Google Tag Manager ID', 'Starts with GTM-', 'Only if you manage extra tags in Tag Manager. Custom HTML tags from other sites may be blocked by the store\'s security settings.'); %>
+      <% field('mk_google_verification', 'Google Search Console verification code', 'Paste the code or the whole <meta> tag', 'Search Console → Add property → URL prefix → HTML tag method', { wide: true }); %>
+    </div>
+    <p class="text-xs text-neutral-400">Universal Analytics (UA-) IDs are not supported: Google shut UA down in 2024. Use GA4.</p>
+  </section>
+  <button class="a-btn px-6 py-3">Save marketing settings</button>
+</form>
+<%- include('partials/bottom') %>

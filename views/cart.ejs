@@ -1,6 +1,7 @@
 <%- include('partials/header') %>
 <div class="container-x py-10">
   <h1 class="text-4xl font-semibold">Your cart</h1>
+  <% if (cart.hasSoldOut) { %><p role="alert" class="mt-4 text-sm bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3">Some items are out of stock or low on stock. Please update quantities or remove them to continue.</p><% } %>
   <% if (!cart.items.length) { %>
     <div class="text-center py-20">
       <p class="font-display text-2xl">Your cart is empty</p>
@@ -15,7 +16,7 @@
         <a href="/products/<%= i.slug %>" class="w-24 h-24 sm:w-28 sm:h-28 shrink-0 rounded-lg overflow-hidden bg-paper"><img src="<%= i.product.image %>" alt="<%= i.product.name %>" class="w-full h-full object-cover"></a>
         <div class="flex-1 min-w-0">
           <a href="/products/<%= i.slug %>?v=<%= i.sku %>" class="font-display text-lg hover:text-gold-dark"><%= i.product.name %></a>
-          <p class="text-sm text-neutral-500"><%= i.variant.label %> &middot; <%= i.sku %></p>
+          <p class="text-sm text-neutral-500"><%= i.variant.label %> &middot; <%= i.sku %></p><% if (i.soldOut) { %><p class="text-sm text-red-600 font-medium">Only <%= Math.max(i.variant.stock, 0) %> available</p><% } %>
           <p class="mt-1 text-sm"><%= money(i.unit) %> <span class="line-through text-neutral-400"><%= money(i.mrp) %></span></p>
           <div class="mt-3 flex items-center gap-4 flex-wrap">
             <form method="post" action="/cart/update" class="flex items-center gap-2">
@@ -36,10 +37,16 @@
       <dl class="mt-4 space-y-2 text-sm">
         <div class="flex justify-between"><dt>Items (<%= cart.count %>)</dt><dd><%= money(cart.mrpTotal) %></dd></div>
         <div class="flex justify-between text-green-700"><dt>Discount</dt><dd>&minus; <%= money(cart.savings) %></dd></div>
+        <% if (coupon) { %><div class="flex justify-between text-green-700"><dt>Coupon <%= coupon.code %></dt><dd>&minus; <%= money(coupon.discount) %></dd></div><% } %>
         <div class="flex justify-between"><dt>Shipping</dt><dd><%= cart.shipping ? money(cart.shipping) : 'Free' %></dd></div>
-        <div class="flex justify-between border-t border-neutral-300 pt-3 text-base font-semibold"><dt>Total</dt><dd><%= money(cart.subtotal + cart.shipping) %></dd></div>
+        <div class="flex justify-between border-t border-neutral-300 pt-3 text-base font-semibold"><dt>Total</dt><dd><%= money(cart.subtotal - (coupon ? coupon.discount : 0) + cart.shipping) %></dd></div>
       </dl>
-      <a href="/checkout" class="btn-dark w-full mt-6 py-4 text-base">Proceed to checkout</a>
+      <form method="post" action="/cart/coupon" class="mt-5">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <% if (coupon) { %><p class="text-sm text-green-700"><%= coupon.message %> <button name="remove" value="1" class="underline ml-1">Remove</button></p>
+        <% } else { %><label class="label" for="code">Coupon code</label><div class="flex gap-2"><input class="field uppercase" id="code" name="code" placeholder="EXTRA15"><button class="btn-outline px-5">Apply</button></div><% if (couponMsg) { %><p class="text-xs text-red-600 mt-1"><%= couponMsg %></p><% } %><% } %>
+      </form>
+      <% if (cart.hasSoldOut) { %><span class="btn-dark w-full mt-6 py-4 text-base opacity-50 cursor-not-allowed">Proceed to checkout</span><% } else { %><a href="/checkout" class="btn-dark w-full mt-6 py-4 text-base"><%= customer ? 'Proceed to checkout' : 'Log in & checkout' %></a><% } %>
       <a href="/products" class="block text-center text-sm mt-4 underline underline-offset-4">Continue shopping</a>
     </aside>
   </div>

@@ -1,0 +1,12 @@
+<%- include('partials/top') %>
+<p class="text-sm text-neutral-600">Download CSV reports (open in Excel or Google Sheets). Choose the period on each card.</p>
+<div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+  <% Object.entries(reports).forEach(([k, rep]) => { %>
+  <form method="get" action="/admin/reports/<%= k %>.csv" class="a-card p-5 flex flex-col">
+    <h2 class="font-semibold"><%= rep.title %></h2><p class="text-sm text-neutral-600 mt-2 flex-1"><%= rep.desc %></p>
+    <label class="a-lbl mt-4" for="d-<%= k %>">Range</label>
+    <div class="flex gap-2"><select class="a-in" id="d-<%= k %>" name="days"><% [[7,'Last 7 days'],[30,'Last 30 days'],[90,'Last 90 days'],[180,'Last 6 months'],[365,'Last year']].forEach(([v,l]) => { %><option value="<%= v %>" <%= v === 30 ? 'selected' : '' %>><%= l %></option><% }) %></select><button class="a-btn">Download</button></div>
+  </form>
+  <% }) %>
+</div>
+<%- include('partials/bottom') %>

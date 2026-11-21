@@ -1,0 +1,27 @@
+<% if (items && items.length) { %>
+<section class="container-x pt-20" aria-labelledby="ugc-h">
+  <h2 id="ugc-h" class="text-3xl md:text-4xl font-semibold"><%= heading %></h2>
+  <% if (typeof sub !== 'undefined' && sub) { %><p class="mt-2 text-neutral-600"><%= sub %></p><% } %>
+  <div class="mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <% items.forEach((t) => { %>
+    <figure class="group rounded-2xl overflow-hidden border border-neutral-200 bg-white flex flex-col">
+      <div class="relative aspect-[9/16] bg-neutral-100" <%= t.videoId ? 'data-video-box' : '' %>>
+        <% if (t.videoId) { %>
+          <button type="button" data-video="<%= t.videoId %>" class="absolute inset-0 w-full h-full" aria-label="Play video from <%= t.customer_name || 'a customer' %>">
+            <img src="<%= t.thumbUrl %>" alt="" loading="lazy" class="w-full h-full object-cover opacity-95 group-hover:opacity-100">
+            <span class="absolute inset-0 flex items-center justify-center"><span class="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg"><svg class="w-6 h-6 text-ink ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></span>
+          </button>
+        <% } else { %>
+          <img src="<%= t.thumbUrl %>" alt="Photo shared by <%= t.customer_name || 'a customer' %>" loading="lazy" class="w-full h-full object-cover">
+        <% } %>
+      </div>
+      <figcaption class="p-3 text-sm flex-1">
+        <% if (t.quote) { %><p class="text-neutral-700 line-clamp-3">&ldquo;<%= t.quote %>&rdquo;</p><% } %>
+        <p class="mt-1"><b><%= t.customer_name %></b><% if (t.city) { %> <span class="text-neutral-500">&middot; <%= t.city %></span><% } %></p>
+        <% if (t.productObj) { %><a class="text-xs text-gold-dark font-semibold hover:underline" href="/products/<%= t.productObj.slug %>">Shop <%= t.productObj.name %></a><% } %>
+      </figcaption>
+    </figure>
+    <% }) %>
+  </div>
+</section>
+<% } %>

@@ -1,0 +1,29 @@
+<%- include('partials/header') %>
+<div class="container-x py-12 max-w-4xl">
+  <div class="flex flex-wrap items-center justify-between gap-3"><h1 class="text-4xl font-semibold">My account</h1><form method="post" action="/logout"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn-outline py-2">Log out</button></form></div>
+  <section class="mt-8 grid md:grid-cols-3 gap-8">
+    <form method="post" action="/account/profile" class="md:col-span-1 space-y-3">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <h2 class="text-xl font-semibold">Profile</h2>
+      <% if (saved) { %><p class="text-sm text-green-700">Saved.</p><% } %>
+      <div><label class="label">WhatsApp number</label><input class="field bg-neutral-50" value="+91 <%= me.phone %>" readonly></div>
+      <div><label class="label" for="name">Name</label><input class="field" id="name" name="name" value="<%= me.name || '' %>"></div>
+      <div><label class="label" for="email">Email</label><input class="field" id="email" name="email" type="email" value="<%= me.email || '' %>"></div>
+      <button class="btn-dark w-full">Save</button>
+    </form>
+    <div class="md:col-span-2">
+      <h2 class="text-xl font-semibold mb-4">Orders</h2>
+      <% if (!list.length) { %><p class="text-neutral-600">No orders yet. <a class="underline" href="/products">Start shopping</a>.</p><% } %>
+      <ul class="space-y-4">
+        <% list.forEach((o) => { %>
+        <li class="border border-neutral-200 rounded-xl p-5">
+          <div class="flex flex-wrap justify-between gap-2"><div><a class="font-semibold underline" href="/order/<%= o.id %>"><%= o.id %></a><p class="text-xs text-neutral-500"><%= new Date(o.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) %></p></div><span class="text-sm font-medium px-3 py-1 rounded-full bg-paper h-fit"><%= statusLabel[o.status] %></span></div>
+          <p class="text-sm text-neutral-700 mt-3"><%= o.items.map((i) => i.product_name + ' (' + i.variant_label + ') x' + i.qty).join(', ') %></p>
+          <p class="text-sm mt-2 font-semibold"><%= money(o.total) %> <% if (o.awb) { %><span class="font-normal text-neutral-500">&middot; <%= o.courier %> AWB <%= o.awb %></span><% } %></p>
+        </li>
+        <% }) %>
+      </ul>
+    </div>
+  </section>
+</div>
+<%- include('partials/footer') %>

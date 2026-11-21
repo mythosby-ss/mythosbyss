@@ -1,0 +1,14 @@
+<%# params: labels[], a[], b[], aName, bName, money(bool) %>
+<% const max = Math.max(1, ...a, ...b); const fmt = (v) => money ? '\u20B9' + Number(v).toLocaleString('en-IN') : v; %>
+<div class="flex items-end gap-2 h-52 overflow-x-auto pb-1" role="img" aria-label="<%= aName %> and <%= bName %> by day">
+  <% labels.forEach((l, i) => { %>
+  <div class="flex-1 min-w-[44px] flex flex-col items-center justify-end h-full">
+    <div class="flex items-end gap-1 h-full w-full justify-center">
+      <div class="w-3 sm:w-5 bg-[#4c5fc7] rounded-t" style="height: <%= Math.max(2, Math.round(a[i] / max * 100)) %>%" title="<%= aName %>: <%= fmt(a[i]) %>"></div>
+      <div class="w-3 sm:w-5 bg-[#a9b4e8] rounded-t" style="height: <%= Math.max(2, Math.round(b[i] / max * 100)) %>%" title="<%= bName %>: <%= fmt(b[i]) %>"></div>
+    </div>
+    <span class="text-[11px] text-neutral-500 mt-1 whitespace-nowrap"><%= l %></span>
+  </div>
+  <% }) %>
+</div>
+<div class="flex gap-4 justify-center text-xs text-neutral-600 mt-2"><span><i class="inline-block w-2.5 h-2.5 rounded-full bg-[#4c5fc7] mr-1"></i><%= aName %></span><span><i class="inline-block w-2.5 h-2.5 rounded-full bg-[#a9b4e8] mr-1"></i><%= bName %></span></div>

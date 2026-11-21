@@ -18,6 +18,15 @@
   }
   window.MB.toast = toast;
 
+  // UGC videos: swap the thumbnail for the Google Drive player when clicked
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-video]'); if (!b) return;
+    const f = document.createElement('iframe');
+    f.src = 'https://drive.google.com/file/d/' + encodeURIComponent(b.dataset.video) + '/preview';
+    f.allow = 'autoplay; fullscreen'; f.setAttribute('allowfullscreen', ''); f.title = 'Customer video';
+    f.className = 'absolute inset-0 w-full h-full border-0'; b.replaceWith(f);
+  });
+
   // Mobile menu
   const menuBtn = $('[data-menu-toggle]');
   if (menuBtn) menuBtn.addEventListener('click', () => {
@@ -44,22 +53,64 @@
   const prod = $('[data-product]');
   if (prod) {
     const variants = JSON.parse(prod.dataset.variants);
+    const productImages = JSON.parse(prod.dataset.productImages);
+    const gallery = $('[data-gallery]', prod);
     const form = $('[data-buy-form]', prod); const qty = $('[data-qty]', prod);
+    const showGallery = (images) => {
+      const selectedImages = images.length ? images : productImages;
+      const frame = document.createElement('div');
+      frame.className = 'aspect-square rounded-2xl overflow-hidden bg-paper border border-neutral-200';
+      const main = document.createElement('img');
+      main.dataset.mainImage = '';
+      main.src = selectedImages[0];
+      main.alt = $('[data-main-image]', gallery)?.alt || '';
+      main.className = 'w-full h-full object-cover';
+      frame.appendChild(main);
+      gallery.replaceChildren(frame);
+      if (selectedImages.length > 1) {
+        const thumbs = document.createElement('div');
+        thumbs.className = 'mt-3 grid grid-cols-5 gap-3';
+        selectedImages.forEach((src, i) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.dataset.thumb = src;
+          button.className = `aspect-square rounded-lg overflow-hidden border ${i === 0 ? 'border-ink' : 'border-neutral-200'}`;
+          button.setAttribute('aria-label', `Show image ${i + 1}`);
+          const image = document.createElement('img');
+          image.src = src;
+          image.alt = '';
+          image.loading = 'lazy';
+          image.className = 'w-full h-full object-cover';
+          button.appendChild(image);
+          thumbs.appendChild(button);
+        });
+        gallery.appendChild(thumbs);
+      }
+    };
     const setVariant = (sku) => {
       const v = variants.find((x) => x.sku === sku); if (!v) return;
       $('[data-sku]', prod).value = sku; $('[data-price]', prod).textContent = money(v.price); $('[data-mrp]', prod).textContent = money(v.mrp);
+      showGallery(v.images || []);
+      const st = $('[data-stock]', prod);
+      st.textContent = v.stock <= 0 ? 'Out of stock' : v.stock <= 5 ? 'Only ' + v.stock + ' left' : 'In stock';
+      st.className = 'mt-4 text-sm font-medium ' + (v.stock <= 0 ? 'text-red-600' : v.stock <= 5 ? 'text-amber-600' : 'text-green-700');
+      $('[data-add-to-cart]', prod).disabled = v.stock <= 0; $('[data-buy-now]', prod).disabled = v.stock <= 0;
+      qty.max = Math.min(10, v.stock || 1); clamp();
       history.replaceState(null, '', '?v=' + encodeURIComponent(sku));
     };
     $$('input[name="variant"]', prod).forEach((r) => r.addEventListener('change', () => setVariant(r.value)));
-    const clamp = () => { qty.value = Math.min(10, Math.max(1, parseInt(qty.value, 10) || 1)); };
+    const maxQ = () => { const v = variants.find((x) => x.sku === $('[data-sku]', prod).value); return Math.max(1, Math.min(10, v ? v.stock : 10)); };
+    const clamp = () => { qty.value = Math.min(maxQ(), Math.max(1, parseInt(qty.value, 10) || 1)); };
     $('[data-qty-dec]', prod).addEventListener('click', () => { qty.value = (parseInt(qty.value, 10) || 1) - 1; clamp(); });
     $('[data-qty-inc]', prod).addEventListener('click', () => { qty.value = (parseInt(qty.value, 10) || 1) + 1; clamp(); });
     qty.addEventListener('change', clamp);
 
-    $$('[data-thumb]', prod).forEach((b) => b.addEventListener('click', () => {
+    gallery.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-thumb]');
+      if (!b) return;
       $('[data-main-image]', prod).src = b.dataset.thumb;
-      $$('[data-thumb]', prod).forEach((x) => { x.classList.toggle('border-ink', x === b); x.classList.toggle('border-neutral-200', x !== b); });
-    }));
+      $$('[data-thumb]', gallery).forEach((x) => { x.classList.toggle('border-ink', x === b); x.classList.toggle('border-neutral-200', x !== b); });
+    });
 
     // Add to cart via fetch (falls back to normal form post if JS is off)
     const addBtn = $('[data-add-to-cart]', prod);
@@ -73,6 +124,13 @@
         if (!data.ok) throw new Error(data.message);
         const badge = $('[data-cart-count]'); badge.textContent = data.count; badge.classList.remove('hidden');
         toast('Added to cart');
+        if (window.MBTrack) {
+          try {
+            const ev = JSON.parse(document.getElementById('mb-event').textContent).items[0];
+            const v = variants.find((x) => x.sku === form.sku.value) || {};
+            window.MBTrack('add_to_cart', { items: [{ ...ev, id: form.sku.value, variant: v.label || ev.variant, price: v.price || ev.price, qty: Number(qty.value) || 1 }] });
+          } catch (_) { /* tracking must never break the cart */ }
+        }
       } catch (err) { toast(err.message || 'Could not add to cart'); }
       addBtn.disabled = false;
     });

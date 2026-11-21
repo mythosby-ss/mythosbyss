@@ -1,0 +1,42 @@
+<%- include('partials/top') %>
+<form method="post" action="/admin/settings/billing" class="a-card p-5 max-w-3xl space-y-5" data-gst-form>
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <div>
+    <h2 class="a-h">Billing details</h2>
+    <p class="text-sm text-neutral-500 mt-1">Printed as the seller on every tax invoice and shipping label. The state decides CGST + SGST (same state) or IGST (other states).</p>
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="md:col-span-2">
+      <label class="a-lbl" for="biz_gstin">GSTIN</label>
+      <div class="flex gap-2">
+        <input class="a-in uppercase font-mono" id="biz_gstin" name="biz_gstin" maxlength="15" value="<%= s.biz_gstin || '' %>" placeholder="15-character GST number" autocomplete="off">
+        <button type="button" class="a-btn-o whitespace-nowrap" data-gst-fill>Fill PAN &amp; state</button>
+      </div>
+      <p class="text-xs text-neutral-400 mt-1">PAN and state are read from the GSTIN itself. Leave blank if you are not GST registered.</p>
+    </div>
+    <div><label class="a-lbl" for="biz_name">Company / legal name <span class="text-red-500">*</span></label><input class="a-in" id="biz_name" name="biz_name" required value="<%= s.biz_name || '' %>" placeholder="As on your GST certificate"></div>
+    <div><label class="a-lbl" for="biz_phone">Contact number <span class="text-red-500">*</span></label><input class="a-in" id="biz_phone" name="biz_phone" required inputmode="tel" value="<%= s.biz_phone || '' %>" placeholder="10-digit mobile number"></div>
+    <div><label class="a-lbl" for="biz_email">Email</label><input class="a-in" type="email" id="biz_email" name="biz_email" value="<%= s.biz_email || '' %>" placeholder="Business email"></div>
+    <div><label class="a-lbl" for="biz_pan">PAN</label><input class="a-in uppercase font-mono" id="biz_pan" name="biz_pan" maxlength="10" value="<%= s.biz_pan || '' %>" placeholder="Filled from GSTIN"></div>
+    <div class="md:col-span-2"><label class="a-lbl" for="biz_address">Address <span class="text-red-500">*</span></label><input class="a-in" id="biz_address" name="biz_address" required value="<%= s.biz_address || '' %>" placeholder="Building, street, area"></div>
+    <div><label class="a-lbl" for="biz_pincode">Pincode <span class="text-red-500">*</span></label><input class="a-in" id="biz_pincode" name="biz_pincode" required inputmode="numeric" maxlength="6" value="<%= s.biz_pincode || '' %>" placeholder="6 digits"></div>
+    <div><label class="a-lbl" for="biz_city">Town / city <span class="text-red-500">*</span></label><input class="a-in" id="biz_city" name="biz_city" required value="<%= s.biz_city || '' %>" placeholder="City"></div>
+    <div><label class="a-lbl" for="biz_state">State <span class="text-red-500">*</span></label>
+      <select class="a-in" id="biz_state" name="biz_state" required><option value="">Select state</option>
+        <% states.slice().sort().forEach((st) => { %><option <%= (s.biz_state || s.home_state) === st ? 'selected' : '' %>><%= st %></option><% }) %>
+      </select></div>
+  </div>
+
+  <div class="border-t border-neutral-100 pt-5">
+    <h2 class="a-h">Invoice</h2>
+    <div class="grid md:grid-cols-3 gap-4 mt-3">
+      <div><label class="a-lbl" for="invoice_prefix">Invoice number prefix</label><input class="a-in font-mono" id="invoice_prefix" name="invoice_prefix" value="<%= s.invoice_prefix || 'MBSS-' %>"><p class="text-xs text-neutral-400 mt-1">Invoice no. = prefix + order ID</p></div>
+      <div><label class="a-lbl" for="biz_hsn">Default HSN code</label><input class="a-in font-mono" id="biz_hsn" name="biz_hsn" maxlength="8" value="<%= s.biz_hsn || '' %>" placeholder="4–8 digits (optional)"></div>
+      <div><label class="a-lbl">GST rate</label><p class="py-2 text-sm"><b><%= s.gst_percent %>%</b> <a class="text-adm-blue text-xs ml-1" href="/admin/settings">change</a></p></div>
+      <div class="md:col-span-3"><label class="a-lbl" for="invoice_note">Note printed at the bottom (optional)</label><input class="a-in" id="invoice_note" name="invoice_note" value="<%= s.invoice_note || '' %>" placeholder="Shown on every invoice, for example your return policy"></div>
+    </div>
+  </div>
+  <div class="flex items-center gap-3"><button class="a-btn px-6 py-3">Save</button><span class="text-xs text-neutral-500">Print an invoice from any order's page.</span></div>
+</form>
+<script type="application/json" id="gst-states"><%- JSON.stringify(gstStates) %></script>
+<%- include('partials/bottom') %>
