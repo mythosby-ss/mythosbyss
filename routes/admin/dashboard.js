@@ -47,12 +47,12 @@ router.get('/', async (req, res, next) => {
 
     // Orders to dispatch / in transit / pending RTO
     const pending    = await db.val("SELECT COUNT(*) FROM orders WHERE status IN ('confirmed','packed')");
-    const inTransit  = await db.val("SELECT COUNT(*) FROM orders WHERE status IN ('shipped','out_for_delivery')");
+    const inTransit  = await db.val("SELECT COUNT(*) FROM orders WHERE status IN ('shipped','out_for_delivery','ndr')");
     const pendingRto = await db.val("SELECT COUNT(*) FROM orders WHERE status='rto'");
 
     // Inventory
-    const lowStock   = await db.val('SELECT COUNT(*) FROM variants WHERE stock <= low_stock AND active=1');
-    const outOfStock = await db.val('SELECT COUNT(*) FROM variants WHERE stock <= 0 AND active=1');
+    const lowStock   = await db.val('SELECT COUNT(*) FROM variants WHERE stock <= low_stock AND active=1 AND sku NOT IN (SELECT bundle_sku FROM bundle_items)');
+    const outOfStock = await db.val('SELECT COUNT(*) FROM variants WHERE stock <= 0 AND active=1 AND sku NOT IN (SELECT bundle_sku FROM bundle_items)');
 
     // This month stats
     const mb = monthBounds();

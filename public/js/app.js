@@ -18,6 +18,13 @@
   }
   window.MB.toast = toast;
 
+  // Marketing: AddToCart for forms that add products without the product-page script (cart add-ons)
+  const track = (...items) => { try { if (window.MBTrack && items.length) window.MBTrack('add_to_cart', { items }); } catch (_) { /* never break shopping */ } };
+  document.addEventListener('submit', (e) => {
+    const f = e.target.closest && e.target.closest('form[data-track-add]'); if (!f) return;
+    try { track(JSON.parse(f.dataset.trackAdd)); } catch (_) { /* ignore */ }
+  });
+
   // UGC videos: swap the thumbnail for the Google Drive player when clicked
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-video]'); if (!b) return;
@@ -115,7 +122,11 @@
     // Add to cart via fetch (falls back to normal form post if JS is off)
     const addBtn = $('[data-add-to-cart]', prod);
     form.addEventListener('submit', async (e) => {
-      if (e.submitter !== addBtn) return; // Buy now posts normally
+      if (e.submitter !== addBtn) { // Buy now posts normally; still report AddToCart
+        const v = variants.find((x) => x.sku === form.sku.value) || {};
+        track({ id: form.sku.value, name: ($('h1') || {}).textContent, variant: v.label, price: v.price, qty: Number(qty.value) || 1 });
+        return;
+      }
       e.preventDefault(); clamp(); addBtn.disabled = true;
       try {
         const res = await fetch('/cart/add', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'x-csrf-token': csrf() },
@@ -135,13 +146,33 @@
       addBtn.disabled = false;
     });
 
-    // Delivery check (estimate only - wire to a courier API such as Shiprocket for real serviceability)
+    // Frequently bought together: live total, and keep "This item" in sync with the chosen size
+    const fbt = $('[data-fbt]');
+    if (fbt) {
+      const boxes = $$('input[name="add"]', fbt);
+      const total = () => {
+        const on = boxes.filter((b) => b.checked);
+        $('[data-fbt-total]', fbt).textContent = money(on.reduce((s, b) => s + Number(b.dataset.price), 0));
+        $('[data-fbt-btn]', fbt).disabled = !on.length;
+      };
+      boxes.forEach((b) => b.addEventListener('change', total));
+      fbt.addEventListener('submit', () => track(...boxes.filter((b) => b.checked).map((b) => ({ id: b.value.split(':')[1], price: Number(b.dataset.price), qty: 1 }))));
+      $$('input[name="variant"]', prod).forEach((r) => r.addEventListener('change', () => {
+        const v = variants.find((x) => x.sku === r.value); const main = $('[data-fbt-main]', fbt);
+        if (v && main) { main.value = main.value.split(':')[0] + ':' + v.sku; main.dataset.price = v.price; total(); }
+      }));
+    }
+
+    // Delivery check: pincode rules from Admin > Settings > COD & RTO rules (GET /api/pincode/:pin)
     const pf = $('[data-pincode]', prod);
     pf.addEventListener('submit', (e) => {
       e.preventDefault(); const pin = $('#pin').value.trim(); const out = $('[data-pin-result]', prod);
       out.classList.remove('hidden');
       if (!/^[1-9]\d{5}$/.test(pin)) { out.className = 'mt-3 text-sm text-red-600'; out.textContent = 'Enter a valid 6-digit pincode.'; return; }
-      out.className = 'mt-3 text-sm text-green-700'; out.textContent = 'Delivery to ' + pin + ' in 4-8 working days. Free shipping. COD available.';
+      out.className = 'mt-3 text-sm text-neutral-600'; out.textContent = 'Checking...';
+      fetch('/api/pincode/' + pin, { headers: { Accept: 'application/json' } }).then((r) => r.json()).then((d) => {
+        out.className = 'mt-3 text-sm ' + (d.ok && d.serviceable ? 'text-green-700' : 'text-red-600'); out.textContent = d.message || 'Please try again.';
+      }).catch(() => { out.className = 'mt-3 text-sm text-red-600'; out.textContent = 'Could not check right now. Please try again.'; });
     });
   }
 })();

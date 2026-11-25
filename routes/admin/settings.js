@@ -33,19 +33,22 @@ router.post('/settings/billing', async (req, res) => {
 /* ---------------- Marketing & tracking ---------------- */
 // [key, label, validation regex (optional), secret?]
 const MK = {
-  mk_pixel_id: /^\d{10,20}$/, mk_capi_token: null, mk_catalogue_id: /^\d{6,20}$/, mk_fb_page_id: /^\d{5,20}$/, mk_fb_business_id: /^\d{5,20}$/,
+  mk_pixel_id: /^\d{10,20}$/, mk_catalogue_id: /^\d{6,20}$/, mk_fb_page_id: /^\d{5,20}$/, mk_fb_business_id: /^\d{5,20}$/,
   mk_report_link: /^https:\/\/\S+$/, mk_google_verification: /^[\w-]{10,100}$/,
   mk_ga4_id: /^G-[A-Z0-9]{4,15}$/, mk_ga4_api_secret: null, mk_gads_id: /^AW-\d{6,15}$/, mk_gmc_id: /^\d{5,15}$/, mk_gtm_id: /^GTM-[A-Z0-9]{4,10}$/,
   mk_gads_purchase_label: /^[\w-]{5,40}$/, mk_gads_a2c_label: /^[\w-]{5,40}$/, mk_gads_view_label: /^[\w-]{5,40}$/
 };
-const SECRET = ['mk_capi_token', 'mk_ga4_api_secret'];
+const SECRET = ['mk_ga4_api_secret']; // Meta CAPI token lives only in .env (META_CAPI_TOKEN)
 const NAMES = { mk_pixel_id: 'Pixel ID', mk_catalogue_id: 'Catalogue ID', mk_fb_page_id: 'Facebook Page ID', mk_fb_business_id: 'Business Manager ID', mk_report_link: 'Marketing report link (must start with https://)', mk_google_verification: 'Google Search verification code', mk_ga4_id: 'GA4 Measurement ID (G-XXXXXXX)', mk_gads_id: 'Google Ads tag ID (AW-XXXXXXXXX)', mk_gmc_id: 'Merchant Center ID', mk_gtm_id: 'Tag Manager ID (GTM-XXXXXXX)', mk_gads_purchase_label: 'Purchase label', mk_gads_a2c_label: 'Add-to-cart label', mk_gads_view_label: 'View item label' };
 
-router.get('/settings/marketing', (req, res) => {
+router.get('/settings/marketing', async (req, res) => {
   const s = settings.all();
+  const db = require('../../lib/db');
+  const exclusions = Object.fromEntries((await db.q('SELECT kind, COUNT(*) n FROM ad_exclusions GROUP BY kind')).map((r) => [r.kind, r.n]));
+  const meta = { pixelEnv: Boolean(process.env.META_PIXEL_ID), pixel: Boolean(process.env.META_PIXEL_ID || s.mk_pixel_id), token: Boolean(process.env.META_CAPI_TOKEN), test: Boolean(process.env.META_TEST_EVENT_CODE) };
   const view = { ...s }; SECRET.forEach((k) => { view[k] = ''; });
   const site = (process.env.SITE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
-  res.render('admin/settings-marketing', { title: 'Marketing & tracking', s: view, has: Object.fromEntries(SECRET.map((k) => [k, Boolean(s[k])])), feedUrl: `${site}/feeds/products.xml` });
+  res.render('admin/settings-marketing', { title: 'Marketing & tracking', s: view, has: Object.fromEntries(SECRET.map((k) => [k, Boolean(s[k])])), feedUrl: `${site}/feeds/products.xml`, exclusions, meta });
 });
 router.post('/settings/marketing', async (req, res) => {
   const b = req.body; const errs = [];
@@ -60,6 +63,31 @@ router.post('/settings/marketing', async (req, res) => {
   if (errs.length) res.flash(`Saved, except these fields which don't look right: ${errs.join(', ')}.`, 'err');
   else res.flash('Marketing settings saved. Tracking codes are live on the storefront.');
   res.redirect('/admin/settings/marketing');
+});
+
+// Hashed customer list for a Meta "Customer list" custom audience (to EXCLUDE RTO / cancelled buyers from ads).
+// Columns follow Meta's customer-list format: email, phone (normalised: lowercase email; 91 + 10-digit phone), SHA-256.
+router.get('/settings/marketing/exclusions.csv', async (req, res, next) => {
+  try {
+    const db = require('../../lib/db'); const crypto = require('crypto');
+    const sha = (v) => crypto.createHash('sha256').update(v).digest('hex');
+    const KINDS = ['rto', 'cod_cancelled', 'cancelled', 'unpaid'];
+    const kinds = [].concat(req.query.kind || ['rto', 'cod_cancelled', 'cancelled']).filter((k) => KINDS.includes(k));
+    if (!kinds.length) { res.flash('Choose at least one type of order to export.', 'err'); return res.redirect('/admin/settings/marketing#exclusions'); }
+    const where = [`x.kind IN (${kinds.map(() => '?').join(',')})`]; const args = [...kinds];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(req.query.from || '')) { where.push('x.at >= ?'); args.push(req.query.from); }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(req.query.to || '')) { where.push('x.at <= ?'); args.push(req.query.to + 'T23:59:59.999Z'); }
+    const rows = await db.q(`SELECT DISTINCT o.phone, o.email FROM ad_exclusions x JOIN orders o ON o.id=x.order_id WHERE ${where.join(' AND ')}`, args);
+    const seen = new Set(); const lines = ['email,phone'];
+    for (const r of rows) {
+      const phone = String(r.phone || '').replace(/\D/g, '').slice(-10); const email = String(r.email || '').trim().toLowerCase();
+      const line = `${email ? sha(email) : ''},${phone.length === 10 ? sha('91' + phone) : ''}`;
+      if (line !== ',' && !seen.has(line)) { seen.add(line); lines.push(line); }
+    }
+    res.set('Content-Type', 'text/csv; charset=utf-8');
+    res.set('Content-Disposition', `attachment; filename="meta-exclusion-audience-${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.send(lines.join('\n') + '\n');
+  } catch (e) { next(e); }
 });
 
 /* ---------------- Shipping label ---------------- */

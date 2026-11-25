@@ -1,11 +1,14 @@
 <%- include('partials/header') %>
-<% if (!['awaiting_payment', 'cancelled'].includes(order.status)) { %><script type="application/json" id="mb-event"><%- JSON.stringify({ name: 'purchase', id: order.id, value: order.total, items: order.items.map((i) => ({ id: i.sku, name: i.product_name, variant: i.variant_label, price: i.unit_price, qty: i.qty })) }).replace(/</g, '\\u003c') %></script><% } %>
+<% const paidOnline = order.payment_method !== 'cod' && ['paid', 'advance_paid'].includes(order.payment_status) && !['cancelled', 'rto'].includes(order.status);
+   const codPlaced = order.payment_method === 'cod' && order.status === 'pending_confirmation';
+   if (paidOnline || codPlaced) { const evName = paidOnline ? 'purchase' : 'cod_placed'; %><script type="application/json" id="mb-event"><%- JSON.stringify({ name: evName, id: order.id, eventId: (paidOnline ? 'order-' : 'codplaced-') + order.id, value: order.total, items: order.items.map((i) => ({ id: i.sku, name: i.product_name, variant: i.variant_label, price: i.unit_price, qty: i.qty })) }).replace(/</g, '\\u003c') %></script><% } %>
 <div class="container-x py-12 max-w-3xl">
-  <% const ok = !['awaiting_payment', 'cancelled'].includes(order.status); const steps = ['confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered']; const idx = steps.indexOf(order.status); %>
+  <% const ok = !['awaiting_payment', 'cancelled'].includes(order.status); const steps = ['confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered']; const idx = steps.indexOf(order.status === 'ndr' ? 'out_for_delivery' : order.status); %>
   <div class="text-center">
     <div class="mx-auto w-14 h-14 rounded-full <%= ok ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' %> flex items-center justify-center text-2xl"><%= ok ? '\u2713' : '!' %></div>
     <h1 class="text-4xl font-semibold mt-5"><%= order.status === 'delivered' ? 'Delivered. Enjoy!' : ok ? 'Thank you, your order is placed' : 'Order not completed' %></h1>
     <p class="mt-2 text-neutral-600">Order ID <strong class="text-ink"><%= order.id %></strong>. We send updates to your WhatsApp (+91 <%= order.phone %>).</p>
+    <% if (order.status === 'pending_confirmation') { %><p class="mt-4 text-sm bg-purple-50 border border-purple-200 text-purple-900 rounded-xl p-4">We will message you on WhatsApp (+91 <%= order.phone %>) to confirm your order. Please reply so we can ship it quickly.</p><% } %>
     <% if (order.status === 'awaiting_payment') { %><p class="mt-2 text-amber-700 text-sm">Payment has not been received for this order.</p><% } %>
     <% if (order.status === 'cancelled' || order.status === 'rto') { %><p class="mt-2 text-red-600 text-sm"><%= statusLabel[order.status] %><%= order.cancel_reason ? ': ' + order.cancel_reason : '' %></p><% } %>
   </div>
@@ -15,6 +18,7 @@
     <% steps.forEach((s, i) => { %><li class="<%= i <= idx ? 'text-ink font-semibold' : 'text-neutral-400' %>"><span class="block mx-auto w-3 h-3 rounded-full mb-2 <%= i <= idx ? 'bg-gold' : 'bg-neutral-300' %>"></span><%= statusLabel[s] %></li><% }) %>
   </ol>
   <% } %>
+  <% if (order.status === 'ndr') { %><p class="mt-6 text-sm text-center bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4">The courier could not deliver your order. Our team will contact you on WhatsApp to arrange re-delivery. You can also message us with a good time.</p><% } %>
   <% if (order.awb) { %><p class="mt-6 text-sm text-center bg-paper rounded-xl p-4">Shipped with <strong><%= order.courier %></strong>. Tracking number <strong><%= order.awb %></strong></p><% } %>
 
   <div class="mt-10 grid sm:grid-cols-2 gap-6 text-sm">
@@ -24,7 +28,10 @@
   </div>
   <ul class="mt-8 divide-y divide-neutral-200 border-y border-neutral-200 text-sm">
     <% order.items.forEach((i) => { %><li class="py-3 flex justify-between gap-4"><span><%= i.product_name %> <span class="text-neutral-500">(<%= i.variant_label %>) &times; <%= i.qty %></span></span><span><%= money(i.unit_price * i.qty) %></span></li><% }) %>
-    <% if (order.discount) { %><li class="py-3 flex justify-between text-green-700"><span>Discount <%= order.coupon_code || '' %></span><span>&minus; <%= money(order.discount) %></span></li><% } %>
+    <% const prepaidOff = order.prepaid_discount || 0; const offerOff = order.offer_discount || 0; const couponOff = (order.discount || 0) - prepaidOff - offerOff; %>
+    <% if (couponOff > 0) { %><li class="py-3 flex justify-between text-green-700"><span>Discount <%= order.coupon_code || '' %></span><span>&minus; <%= money(couponOff) %></span></li><% } %>
+    <% if (offerOff > 0) { %><li class="py-3 flex justify-between text-green-700"><span>Quantity offer</span><span>&minus; <%= money(offerOff) %></span></li><% } %>
+    <% if (prepaidOff > 0) { %><li class="py-3 flex justify-between text-green-700"><span>Prepaid discount</span><span>&minus; <%= money(prepaidOff) %></span></li><% } %>
     <li class="py-3 flex justify-between"><span>Shipping</span><span><%= order.shipping_fee ? money(order.shipping_fee) : 'Free' %></span></li>
     <% if (order.cod_fee) { %><li class="py-3 flex justify-between"><span>COD fee</span><span><%= money(order.cod_fee) %></span></li><% } %>
     <li class="py-3 flex justify-between font-semibold text-base"><span>Total</span><span><%= money(order.total) %></span></li>

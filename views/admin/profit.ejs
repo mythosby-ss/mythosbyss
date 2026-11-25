@@ -1,0 +1,165 @@
+<%- include('partials/top') %>
+<% const { r, sum, mix, be, unit } = rep; const neg = (v) => (v < 0 ? '!text-red-600' : v > 0 ? '!text-green-700' : '');
+   const rs = (v) => (v < 0 ? '−' : '') + money(Math.abs(Math.round(v))); const hid = `<input type="hidden" name="from" value="${r.from}"><input type="hidden" name="to" value="${r.to}">`; %>
+<div class="space-y-6">
+
+<div class="a-card p-4 flex flex-wrap items-end justify-between gap-3">
+  <%- include('partials/range', { r, hidden: {} }) %>
+  <p class="text-xs text-neutral-500 max-w-md">Orders are grouped by the day they were placed. Abandoned online payments are left out. RTO % counts only finished orders (delivered + RTO).</p>
+</div>
+
+<!-- Headline -->
+<section class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+  <div class="kpi"><b class="<%= neg(sum.net) %>"><%= rs(sum.net) %></b><span>Profit / loss after ads</span></div>
+  <div class="kpi"><b><%= sum.orders %></b><span>Orders placed (<%= be.ordersPerDayActual %>/day)</span></div>
+  <div class="kpi"><b class="<%= rep.rtoPct > be.rtoWithAds ? '!text-red-600' : '' %>"><%= rep.rtoPct %>%</b><span>RTO rate (<%= sum.rto %> of <%= rep.resolved %> finished)</span></div>
+  <div class="kpi"><b><%= rs(be.perOrderAfterAds) %></b><span>Expected profit per order after ads</span></div>
+  <div class="kpi"><b><%= money(sum.spend) %></b><span>Ad spend (<%= money(be.cpa) %> per order)</span></div>
+</section>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <section class="a-card p-5">
+    <h2 class="a-h mb-3">Orders</h2>
+    <dl class="text-sm space-y-1.5">
+      <div class="flex justify-between"><dt>Total orders</dt><dd><b><%= sum.orders %></b></dd></div>
+      <div class="flex justify-between"><dt>Prepaid</dt><dd><%= mix.prepaid.n %> (<%= mix.prepaid.pct %>%)</dd></div>
+      <div class="flex justify-between"><dt>Partial COD</dt><dd><%= mix.partial_cod.n %> (<%= mix.partial_cod.pct %>%)</dd></div>
+      <div class="flex justify-between"><dt>COD</dt><dd><%= mix.cod.n %> (<%= mix.cod.pct %>%)</dd></div>
+      <div class="flex justify-between border-t pt-1.5"><dt>Delivered</dt><dd class="text-green-700"><b><%= sum.delivered %></b></dd></div>
+      <div class="flex justify-between"><dt>RTO</dt><dd class="text-red-600"><b><%= sum.rto %></b></dd></div>
+      <div class="flex justify-between"><dt>Cancelled before shipping</dt><dd><%= sum.cancelled %></dd></div>
+      <div class="flex justify-between"><dt>In transit (incl. NDR)</dt><dd><%= sum.transit %></dd></div>
+      <div class="flex justify-between"><dt>Not shipped yet</dt><dd><%= sum.pending %></dd></div>
+    </dl>
+  </section>
+
+  <section class="a-card p-5">
+    <h2 class="a-h mb-3">Profit &amp; loss</h2>
+    <dl class="text-sm space-y-1.5">
+      <div class="flex justify-between"><dt>Profit from <%= sum.delivered %> delivered orders</dt><dd class="text-green-700"><%= rs(sum.profitDelivered) %></dd></div>
+      <div class="flex justify-between"><dt>Loss on <%= sum.rto %> RTOs</dt><dd class="text-red-600"><%= rs(-sum.rtoLoss) %></dd></div>
+      <% if (sum.advanceKept) { %><div class="flex justify-between"><dt>Partial-COD advances kept on RTOs</dt><dd class="text-green-700"><%= rs(sum.advanceKept) %></dd></div><% } %>
+      <div class="flex justify-between"><dt>Ad spend</dt><dd class="text-red-600"><%= rs(-sum.spend) %></dd></div>
+      <div class="flex justify-between border-t pt-1.5 font-semibold"><dt>Profit / loss</dt><dd class="<%= neg(sum.net) %>"><%= rs(sum.net) %></dd></div>
+    </dl>
+    <p class="text-xs text-neutral-500 mt-3">Orders still in transit or not shipped are not counted until they are delivered or returned.</p>
+  </section>
+
+  <section class="a-card p-5">
+    <h2 class="a-h mb-3">Breakeven</h2>
+    <dl class="text-sm space-y-1.5">
+      <div class="flex justify-between"><dt>Profit per delivered order (P)</dt><dd><%= rs(be.P) %></dd></div>
+      <div class="flex justify-between"><dt>Loss per RTO (L)</dt><dd><%= rs(be.L) %></dd></div>
+      <div class="flex justify-between"><dt>Ad spend per order (A)</dt><dd><%= rs(be.cpa) %></dd></div>
+      <div class="flex justify-between border-t pt-1.5"><dt>Breakeven RTO % before ads</dt><dd><b><%= be.rtoBeforeAds %>%</b></dd></div>
+      <div class="flex justify-between"><dt>Breakeven RTO % after ads</dt><dd><b class="<%= be.rtoPct > be.rtoWithAds ? 'text-red-600' : 'text-green-700' %>"><%= be.rtoWithAds %>%</b> <span class="text-xs text-neutral-500">(now <%= be.rtoPct %>%)</span></dd></div>
+      <div class="flex justify-between"><dt>Expected profit per order before ads</dt><dd><%= rs(be.perOrder) %></dd></div>
+      <div class="flex justify-between"><dt>Breakeven orders per day</dt><dd><b><%= be.ordersPerDay == null ? (be.avgDailySpend ? 'never at this RTO %' : '-') : be.ordersPerDay %></b> <span class="text-xs text-neutral-500">(ads <%= money(be.avgDailySpend) %>/day)</span></dd></div>
+    </dl>
+    <details class="mt-3 text-xs text-neutral-500"><summary class="cursor-pointer">Formulas</summary>
+      <p class="mt-2">Profit per order = selling price − product cost − packaging − forward shipping − payment/COD fee.<br>Loss per RTO = forward shipping + reverse shipping + packaging.<br>Breakeven RTO % = (P − A) ÷ (P + L); before ads A = 0.<br>Breakeven orders/day = daily ad spend ÷ ((1 − RTO%) × P − RTO% × L).<br>P and L are averages over all orders placed in the period.</p></details>
+  </section>
+</div>
+
+<section class="a-card p-5">
+  <h2 class="a-h mb-3">Average order (all orders in the period)</h2>
+  <div class="grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
+    <div><span class="text-neutral-500 block">Selling price</span><b><%= rs(unit.revenue) %></b></div>
+    <div><span class="text-neutral-500 block">Product cost</span><b>−<%= money(unit.productCost) %></b></div>
+    <div><span class="text-neutral-500 block">Packaging</span><b>−<%= money(unit.packaging) %></b></div>
+    <div><span class="text-neutral-500 block">Forward shipping</span><b>−<%= money(unit.forward) %></b></div>
+    <div><span class="text-neutral-500 block">Payment / COD fee</span><b>−<%= money(unit.fees) %></b></div>
+    <div><span class="text-neutral-500 block">Profit if delivered</span><b class="<%= neg(be.P) %>"><%= rs(be.P) %></b></div>
+  </div>
+  <% if (unit.productCost === 0 && sum.orders) { %><p class="text-sm text-red-600 mt-3">Product cost is ₹0 &mdash; enter your costs in <a class="underline" href="?from=<%= r.from %>&to=<%= r.to %>&costs=1#costs">Product costs</a> below, otherwise profit is overstated.</p><% } %>
+</section>
+
+<!-- RTO breakdowns -->
+<div class="grid lg:grid-cols-2 gap-6">
+  <% [['RTO % by pincode', rep.byPincode, 'pincode'], ['RTO % by state', rep.byState], ['RTO % by courier', rep.byCourier], ['RTO % by payment type', rep.byPayment], ['RTO % by city', rep.byCity]].forEach(([title, rows, kind]) => { %>
+  <section class="a-card p-5">
+    <h2 class="a-h mb-3"><%= title %></h2>
+    <% if (rows.length) { %>
+    <div class="overflow-x-auto max-h-80"><table class="a-table">
+      <thead><tr><th><%= title.replace('RTO % by ', '') %></th><th>Finished</th><th>RTO</th><th>RTO %</th><th>Loss</th><% if (kind) { %><th></th><% } %></tr></thead>
+      <tbody><% rows.forEach((g) => { %><tr>
+        <td class="font-medium"><%= g.key.replace(/_/g, ' ') %></td><td><%= g.n %></td><td><%= g.rto %></td>
+        <td><%- g.pct >= 40 ? pill(g.pct + '%', 'red') : g.pct >= be.rtoWithAds && g.rto ? pill(g.pct + '%', 'amber') : g.pct + '%' %></td><td><%= money(g.loss) %></td>
+        <% if (kind) { %><td><% if (g.rto && /^\d{6}$/.test(g.key)) { %><form method="post" action="/admin/settings/cod/pincodes" data-confirm="Block COD for <%= g.key %>? Prepaid and partial COD stay available."><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="pincodes" value="<%= g.key %>"><input type="hidden" name="action" value="block_cod"><input type="hidden" name="note" value="RTO <%= g.pct %>% (<%= g.rto %>/<%= g.n %>)"><button class="text-xs underline text-red-600">Block COD</button></form><% } %></td><% } %>
+      </tr><% }) %></tbody>
+    </table></div>
+    <% } else { %><p class="text-sm text-neutral-500">No delivered or returned orders in this period yet.</p><% } %>
+  </section>
+  <% }) %>
+</div>
+
+<!-- Daily P&L + ad spend input -->
+<form id="spend" method="post" action="/admin/profit/spend" class="a-card p-5">
+  <input type="hidden" name="_csrf" value="<%= csrf %>"><%- hid %>
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+    <div><h2 class="a-h">Daily profit / loss</h2><p class="text-xs text-neutral-500">Type each day's ad spend (from Ads Manager). Leave empty to use campaign spend from Marketing &gt; Performance.</p></div>
+    <button class="a-btn">Save ad spend</button>
+  </div>
+  <div class="overflow-x-auto max-h-[32rem]"><table class="a-table">
+    <thead><tr><th>Day</th><th>Orders</th><th>Delivered</th><th>RTO</th><th>Open</th><th>Delivered profit</th><th>RTO loss</th><th>Ad spend (₹)</th><th>Profit / loss</th></tr></thead>
+    <tbody><% rep.daily.forEach((d) => { %><tr>
+      <td class="whitespace-nowrap"><%= d.day %></td><td><%= d.orders %></td><td><%= d.delivered %></td><td><%= d.rto %></td><td><%= d.transit + d.pending %></td>
+      <td><%= rs(d.profitDelivered) %></td><td><%= d.rtoLoss ? rs(-d.rtoLoss) : '-' %></td>
+      <td><input type="hidden" name="day" value="<%= d.day %>"><input class="a-in !py-1 w-28" type="number" min="0" step="1" name="amount" value="<%= d.spendSource === 'manual' ? d.spend : '' %>" placeholder="<%= d.spendSource === 'campaigns' ? d.spend : '0' %>" aria-label="Ad spend <%= d.day %>"></td>
+      <td><b class="<%= neg(d.net) %>"><%= rs(d.net) %></b></td>
+    </tr><% }) %></tbody>
+  </table></div>
+</form>
+
+<section class="a-card p-5">
+  <h2 class="a-h mb-3">Monthly profit / loss (last 6 months)</h2>
+  <div class="overflow-x-auto"><table class="a-table">
+    <thead><tr><th>Month</th><th>Orders</th><th>Delivered</th><th>RTO</th><th>RTO %</th><th>Delivered profit</th><th>RTO loss</th><th>Ad spend</th><th>Profit / loss</th></tr></thead>
+    <tbody><% months.forEach((m) => { %><tr>
+      <td><%= m.month %></td><td><%= m.orders %></td><td><%= m.delivered %></td><td><%= m.rto %></td><td><%= m.rtoPct %>%</td>
+      <td><%= rs(m.profitDelivered) %></td><td><%= rs(-m.rtoLoss) %></td><td><%= rs(-m.spend) %></td><td><b class="<%= neg(m.net) %>"><%= rs(m.net) %></b></td>
+    </tr><% }) %></tbody>
+  </table></div>
+</section>
+
+<!-- Assumptions -->
+<form id="assumptions" method="post" action="/admin/profit/assumptions" class="a-card p-5 space-y-4">
+  <input type="hidden" name="_csrf" value="<%= csrf %>"><%- hid %>
+  <div><h2 class="a-h">Cost assumptions</h2><p class="text-xs text-neutral-500">Used when a product or order has no value of its own. A courier charge typed when shipping an order always wins.</p></div>
+  <div class="grid md:grid-cols-4 gap-4">
+    <div><label class="a-lbl" for="pk">Packaging per order (₹)</label><input class="a-in" id="pk" type="number" min="0" step="0.01" name="profit_packaging_default" value="<%= s.profit_packaging_default %>"></div>
+    <div><label class="a-lbl" for="fw">Forward shipping per order (₹)</label><input class="a-in" id="fw" type="number" min="0" step="0.01" name="profit_forward_shipping_default" value="<%= s.profit_forward_shipping_default %>"></div>
+    <div><label class="a-lbl" for="rv">Reverse shipping per RTO (₹)</label><input class="a-in" id="rv" type="number" min="0" step="0.01" name="profit_reverse_shipping" value="<%= s.profit_reverse_shipping %>"></div>
+    <div><label class="a-lbl" for="pg">Payment gateway fee (%)</label><input class="a-in" id="pg" type="number" min="0" max="20" step="0.01" name="pg_fee_percent" value="<%= s.pg_fee_percent %>"></div>
+    <div><label class="a-lbl" for="cp">Courier COD fee (% of cash)</label><input class="a-in" id="cp" type="number" min="0" max="20" step="0.01" name="cod_handling_percent" value="<%= s.cod_handling_percent %>"></div>
+    <div><label class="a-lbl" for="cm">Courier COD fee minimum (₹)</label><input class="a-in" id="cm" type="number" min="0" step="0.01" name="cod_handling_min" value="<%= s.cod_handling_min %>"></div>
+    <label class="flex items-center gap-2 text-sm md:col-span-2 md:self-end"><input type="checkbox" name="profit_deduct_gst" value="1" <%= s.profit_deduct_gst === '1' ? 'checked' : '' %>> Remove GST (<%= s.gst_percent %>%) from the selling price</label>
+  </div>
+  <button class="a-btn">Save assumptions</button>
+</form>
+
+<!-- Product costs -->
+<section id="costs" class="a-card p-5">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div><h2 class="a-h">Product costs</h2><p class="text-xs text-neutral-500">Cost per size, plus packaging and default forward shipping per product (empty = use the assumption above). Also editable on each product's page.</p></div>
+    <% if (!showCosts) { %><a class="a-btn-o" href="?from=<%= r.from %>&to=<%= r.to %>&costs=1#costs">Edit product costs</a><% } %>
+  </div>
+  <% if (showCosts) { %>
+  <form method="post" action="/admin/profit/costs" class="mt-4">
+    <input type="hidden" name="_csrf" value="<%= csrf %>"><%- hid %>
+    <div class="overflow-x-auto max-h-[36rem]"><table class="a-table">
+      <thead><tr><th>Product</th><th>Size: cost (₹)</th><th>Packaging (₹)</th><th>Shipping (₹)</th></tr></thead>
+      <tbody><% products.forEach((p) => { %><tr>
+        <td class="min-w-[200px]"><%= p.name %><%= p.isBundle ? ' (bundle)' : '' %><input type="hidden" name="pid" value="<%= p.id %>"></td>
+        <td><div class="flex flex-wrap gap-2"><% p.variants.forEach((v) => { if (v.isBundle) { %><span class="text-xs text-neutral-500"><%= v.label %>: <%= money(v.cost) %> (sum of its items)</span><% } else { %><label class="text-xs text-neutral-500"><%= v.label %> <span class="text-neutral-400">(sells <%= money(v.price) %>)</span><input type="hidden" name="vid" value="<%= v.id %>"><input class="a-in !py-1 w-24" type="number" min="0" step="0.01" name="vcost" value="<%= v.cost || 0 %>"></label><% } }) %></div></td>
+        <td><input class="a-in !py-1 w-24" type="number" min="0" step="0.01" name="packaging" value="<%= p.packagingCost ?? '' %>" placeholder="<%= s.profit_packaging_default %>"></td>
+        <td><input class="a-in !py-1 w-24" type="number" min="0" step="0.01" name="shipping" value="<%= p.shippingCost ?? '' %>" placeholder="<%= s.profit_forward_shipping_default %>"></td>
+      </tr><% }) %></tbody>
+    </table></div>
+    <button class="a-btn mt-4">Save product costs</button>
+  </form>
+  <% } %>
+</section>
+
+</div>
+<%- include('partials/bottom') %>

@@ -25,10 +25,9 @@ exports.whatsappVerify = (req, res) => {
 };
 exports.whatsappEvents = async (req, res) => {
   const secret = process.env.WHATSAPP_APP_SECRET;
-  if (secret) {
-    const sig = (req.get('x-hub-signature-256') || '').replace('sha256=', '');
-    if (!safeEqual(hmac(secret, req.body), sig)) return res.status(400).end();
-  }
+  if (!secret) return res.status(503).end(); // never accept unsigned delivery receipts
+  const sig = (req.get('x-hub-signature-256') || '').replace('sha256=', '');
+  if (!safeEqual(hmac(secret, req.body), sig)) return res.status(400).end();
   try {
     const body = JSON.parse(req.body.toString('utf8'));
     for (const e of body.entry || []) for (const ch of e.changes || []) for (const s of (ch.value && ch.value.statuses) || []) {
@@ -42,12 +41,13 @@ exports.whatsappEvents = async (req, res) => {
 // Generic courier status webhook (Shiprocket / Delhivery via middleware). POST {order_id, status, awb?} + header x-webhook-secret
 exports.shipping = async (req, res) => {
   if (!process.env.SHIPPING_WEBHOOK_SECRET || !safeEqual(req.get('x-webhook-secret') || '', process.env.SHIPPING_WEBHOOK_SECRET)) return res.status(401).end();
-  const map = { shipped: 'shipped', in_transit: 'shipped', out_for_delivery: 'out_for_delivery', delivered: 'delivered', rto: 'rto', returned: 'rto' };
+  const map = { shipped: 'shipped', in_transit: 'shipped', out_for_delivery: 'out_for_delivery', delivered: 'delivered', rto: 'rto', returned: 'rto',
+    ndr: 'ndr', undelivered: 'ndr', delivery_attempted: 'ndr', failed_delivery: 'ndr' };
   const status = map[String(req.body.status || '').toLowerCase()];
   if (!status) return res.status(400).json({ ok: false, message: 'Unknown status' });
   try {
     const extra = req.body.awb ? { awb: String(req.body.awb) } : {};
-    await orders.setStatus(String(req.body.order_id), status, { actor: 'courier', note: req.body.note, extra });
+    await orders.setStatus(String(req.body.order_id), status, { actor: 'courier', note: req.body.note ? String(req.body.note).slice(0, 200) : undefined, extra });
     res.json({ ok: true });
   } catch (e) { res.status(409).json({ ok: false, message: e.message }); }
 };

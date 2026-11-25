@@ -1,0 +1,31 @@
+<%- include('partials/top') %>
+<div class="space-y-6 max-w-4xl">
+  <form method="post" action="/admin/website/support" class="a-card p-5 space-y-4">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <h2 class="a-h">Customer support</h2>
+    <div class="grid md:grid-cols-3 gap-4">
+      <div><label class="a-lbl" for="support_whatsapp">WhatsApp number (10 digits)</label><input class="a-in" id="support_whatsapp" name="support_whatsapp" inputmode="numeric" maxlength="10" value="<%= s.support_whatsapp %>"></div>
+      <div><label class="a-lbl" for="support_phone">Call number</label><input class="a-in" id="support_phone" name="support_phone" inputmode="numeric" maxlength="10" value="<%= s.support_phone %>"></div>
+      <div><label class="a-lbl" for="support_email">Support email</label><input class="a-in" id="support_email" name="support_email" type="email" value="<%= s.support_email %>"></div>
+    </div>
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="whatsapp_button_enabled" value="1" <%= s.whatsapp_button_enabled === '1' ? 'checked' : '' %>> Show the floating WhatsApp button on every page</label>
+    <div><label class="a-lbl" for="whatsapp_button_text">Message pre-filled when a customer taps the button ({store} = store name)</label><input class="a-in" id="whatsapp_button_text" name="whatsapp_button_text" value="<%= s.whatsapp_button_text %>"></div>
+    <button class="a-btn">Save</button>
+  </form>
+
+  <div class="a-card p-5">
+    <h2 class="a-h">Policy pages</h2>
+    <p class="text-sm text-neutral-500 mt-1">Pages marked <b>Draft</b> still show the starting text written for you &mdash; read and edit them before launch. Format: empty line = new paragraph, <code>## </code> = heading, <code>- </code> = bullet. Placeholders like <code>{free_shipping_threshold}</code>, <code>{prepaid_discount}</code>, <code>{partial_cod_amount}</code>, <code>{delivery_days}</code>, <code>{confirm_hours}</code>, <code>{support_whatsapp}</code> are filled from your settings, so the pages stay correct when you change them.</p>
+  </div>
+  <% list.forEach((p) => { %>
+  <details id="<%= p.slug %>" class="a-card p-5" <%= open === p.slug ? 'open' : '' %>>
+    <summary class="cursor-pointer flex items-center gap-3"><b><%= p.title %></b> <%- p.draft ? pill('Draft', 'amber') : pill('Edited', 'green') %> <a class="text-xs text-adm-blue ml-auto" href="/pages/<%= p.slug %>" target="_blank" rel="noopener">View /pages/<%= p.slug %></a></summary>
+    <form method="post" action="/admin/website/pages/<%= p.slug %>" class="mt-4 space-y-3">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <textarea class="a-in font-mono text-sm" rows="16" name="text" aria-label="<%= p.title %> text"><%= p.text %></textarea>
+      <div class="flex gap-2"><button class="a-btn">Save page</button><% if (!p.draft) { %><button class="a-btn-o" name="reset" value="1" data-confirm="Replace your text with the starting draft?">Reset to draft</button><% } %></div>
+    </form>
+  </details>
+  <% }) %>
+</div>
+<%- include('partials/bottom') %>

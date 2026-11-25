@@ -18,8 +18,14 @@
       <button class="a-btn">Save</button>
     </div>
     <div class="grid md:grid-cols-2 gap-4">
-      <% field('mk_pixel_id', 'Pixel ID', 'Enter your Pixel ID (numbers only)', 'Events Manager → Data sources → your Pixel → ID'); %>
-      <% field('mk_capi_token', 'Conversions API access token', 'Paste the access token', 'Events Manager → your Pixel → Settings → <i>Generate access token</i>. Sends purchases from the server too, so ad blockers can\'t hide them.', { secret: true }); %>
+      <div class="md:col-span-2 rounded-lg border border-neutral-200 p-4 text-sm space-y-1">
+        <p class="font-medium">Pixel &amp; Conversions API (set in the server's <code>.env</code> file)</p>
+        <p>META_PIXEL_ID: <%- meta.pixelEnv ? pill('set', 'green') : meta.pixel ? pill('using the ID below', 'amber') : pill('missing', 'red') %>
+           &middot; META_CAPI_TOKEN: <%- meta.token ? pill('set', 'green') : pill('missing', 'red') %>
+           &middot; META_TEST_EVENT_CODE: <%- meta.test ? pill('ON - events go to Test Events', 'amber') : pill('off', 'gray') %></p>
+        <p class="text-xs text-neutral-500">Purchase is sent only for paid online orders, paid partial-COD advances and COD orders you confirm. New COD orders send <b>COD_Placed</b> instead. Remove META_TEST_EVENT_CODE once testing is done.</p>
+      </div>
+      <% if (!meta.pixelEnv) { field('mk_pixel_id', 'Pixel ID (fallback if META_PIXEL_ID is not set)', 'Enter your Pixel ID (numbers only)', 'Events Manager → Data sources → your Pixel → ID'); } %>
       <% field('mk_catalogue_id', 'Catalogue ID', 'Enter your Commerce Manager catalogue ID', 'Commerce Manager → your catalogue → Settings'); %>
       <% field('mk_fb_page_id', 'Facebook Page ID', 'Enter your Page ID', 'Your Page → About → Page transparency'); %>
       <% field('mk_fb_business_id', 'Business Manager ID', 'Enter your Business Manager ID', 'business.facebook.com → Business settings → Business info'); %>
@@ -29,6 +35,21 @@
       <p class="font-medium">Product catalogue feed (for Meta Catalogue and Google Merchant Center)</p>
       <div class="flex gap-2"><input class="a-in font-mono text-xs" id="feed-url" readonly value="<%= feedUrl %>"><button type="button" class="a-btn-o whitespace-nowrap" data-copy="#feed-url">Copy</button></div>
       <p class="text-xs text-neutral-500">Updates automatically with your catalogue (prices, stock, images). In <b>Commerce Manager → Catalogue → Data sources → Data feed</b>, choose <i>Scheduled feed</i>, paste this URL and set it to update daily. Use the same URL in <b>Merchant Center → Products → Feeds</b>.</p>
+    </div>
+  </section>
+
+  <section class="a-card p-5 space-y-3" id="exclusions">
+    <h2 class="a-h">Ad exclusion audience (RTO &amp; cancelled customers)</h2>
+    <p class="text-sm text-neutral-500">Download hashed (SHA-256) phones and emails of customers whose orders were returned or cancelled, and upload them in <b>Meta Ads Manager → Audiences → Create audience → Custom audience → Customer list</b>. Then exclude that audience from your ad sets so Meta stops finding similar buyers.</p>
+    <div class="flex flex-wrap gap-2 text-sm">
+      <% [['rto', 'RTO (returned)'], ['cod_cancelled', 'COD not confirmed / not reachable'], ['cancelled', 'Cancelled after confirmation'], ['unpaid', 'Online payment never completed']].forEach(([k, l]) => { %>
+        <label class="flex items-center gap-1.5 border border-neutral-200 rounded-lg px-3 py-1.5"><input type="checkbox" name="kind" value="<%= k %>" form="excl-form" <%= k !== 'unpaid' ? 'checked' : '' %>> <%= l %> <span class="text-neutral-400">(<%= exclusions[k] || 0 %>)</span></label>
+      <% }) %>
+    </div>
+    <div class="flex flex-wrap gap-3 items-end">
+      <div><label class="a-lbl" for="ex-from">From (optional)</label><input class="a-in" type="date" id="ex-from" name="from" form="excl-form"></div>
+      <div><label class="a-lbl" for="ex-to">To (optional)</label><input class="a-in" type="date" id="ex-to" name="to" form="excl-form"></div>
+      <button class="a-btn" form="excl-form">Download CSV</button>
     </div>
   </section>
 
@@ -52,4 +73,5 @@
   </section>
   <button class="a-btn px-6 py-3">Save marketing settings</button>
 </form>
+<form id="excl-form" method="get" action="/admin/settings/marketing/exclusions.csv"></form>
 <%- include('partials/bottom') %>

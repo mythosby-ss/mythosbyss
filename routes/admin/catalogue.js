@@ -1,10 +1,9 @@
 const router = require('express').Router();
-const fs = require('fs');
-const path = require('path');
 const multer = require('multer');
 const db = require('../../lib/db');
 const catalog = require('../../lib/catalog');
 const drive = require('../../lib/drive');
+const { optimize: optimizeImage } = require('../../lib/images');
 const verifyCsrf = require('../../lib/csrf');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 8 } });
@@ -59,6 +58,8 @@ router.post('/catalogue/save', async (req, res, next) => {
       const r = await db.run('INSERT INTO products(name,slug,category,description,features,badge,is_new,status,image_alt,seo_title,seo_desc,seo_keywords,updated_at,created_at,images,sort) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [...f, now, '[]', 9999]);
       pid = r.id;
     }
+    const optCost = (v) => (String(v ?? '').trim() === '' ? null : Math.max(0, num(v))); // empty = use profit default
+    await db.run('UPDATE products SET packaging_cost=?, shipping_cost=? WHERE id=?', [optCost(b.packaging_cost), optCost(b.shipping_cost), pid]);
     const existing = (await db.q('SELECT id FROM variants WHERE product_id=?', [pid])).map((v) => v.id);
     const keep = rows.filter((r) => r.id).map((r) => r.id);
     for (const vid of existing.filter((x) => !keep.includes(x))) await db.run('DELETE FROM variants WHERE id=?', [vid]);
@@ -82,9 +83,10 @@ router.post('/catalogue/:id(\\d+)/images', upload.array('files', 8), verifyCsrf,
     const imgs = await getImgs(id); let uploaded = 0; let linked = false;
     for (const f of req.files || []) {
       const t = sniff(f.buffer); if (!t) throw new Error(`${f.originalname} is not a JPG, PNG or WEBP image.`);
+      f.buffer = await optimizeImage(f.buffer); // resize + compress for fast mobile pages
       const base = `${p.slug}-${Date.now().toString(36)}${uploaded}`;
       if (drive.enabled()) imgs.push('drive:' + await drive.upload({ buffer: f.buffer, name: `${base}.${t[0]}`, mimeType: t[1], folderName: p.categoryName }));
-      else { const dir = path.join(__dirname, '..', '..', 'public', 'images', 'products'); fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(path.join(dir, `${base}.${t[0]}`), f.buffer); imgs.push(`/images/products/${base}.${t[0]}`); }
+      else imgs.push(await require('../../lib/imgstore').saveLocal(f.buffer, base, t[0])); // UPLOAD_DIR (survives redeploys)
       uploaded++;
     }
     const link = String(req.body.link || '').trim();
@@ -118,14 +120,10 @@ router.post('/catalogue/:id(\\d+)/variants/:variantId(\\d+)/images', upload.arra
     const images = [...variant.rawImages]; let uploaded = 0; let linked = false;
     for (const f of req.files || []) {
       const t = sniff(f.buffer); if (!t) throw new Error(`${f.originalname} is not a JPG, PNG or WEBP image.`);
+      f.buffer = await optimizeImage(f.buffer); // resize + compress for fast mobile pages
       const base = `${p.slug}-${variant.sku.replace(/[^a-z0-9-]/gi, '-')}-${Date.now().toString(36)}${uploaded}`;
       if (drive.enabled()) images.push('drive:' + await drive.upload({ buffer: f.buffer, name: `${base}.${t[0]}`, mimeType: t[1], folderName: p.categoryName }));
-      else {
-        const dir = path.join(__dirname, '..', '..', 'public', 'images', 'products');
-        fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(path.join(dir, `${base}.${t[0]}`), f.buffer);
-        images.push(`/images/products/${base}.${t[0]}`);
-      }
+      else images.push(await require('../../lib/imgstore').saveLocal(f.buffer, base, t[0])); // UPLOAD_DIR (survives redeploys)
       uploaded++;
     }
     const link = String(req.body.link || '').trim();

@@ -4,10 +4,13 @@
     <section class="a-card p-5">
       <div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="a-h"><%= o.id %></h2><p class="text-sm text-neutral-500">Placed <%= dt(o.created_at) %></p></div><div class="flex gap-2"><%- pill(o.status) %> <%- pill(o.payment_status) %></div></div>
       <table class="a-table mt-4"><thead><tr><th>Item</th><th>SKU</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>
-        <% o.items.forEach((i) => { %><tr><td><%= i.product_name %> <span class="text-neutral-500">(<%= i.variant_label %>)</span></td><td><%= i.sku %></td><td><%= i.qty %></td><td><%= money(i.unit_price) %></td><td><%= money(i.unit_price * i.qty) %></td></tr><% }) %></tbody></table>
+        <% o.items.forEach((i) => { %><tr><td><%= i.product_name %> <span class="text-neutral-500">(<%= i.variant_label %>)</span><% if (i.components) { %><br><span class="text-xs text-neutral-500">Bundle: <%= JSON.parse(i.components).map((c) => c.name + (c.label ? ' (' + c.label + ')' : '') + ' ×' + c.qty).join(', ') %></span><% } %></td><td><%= i.sku %></td><td><%= i.qty %></td><td><%= money(i.unit_price) %></td><td><%= money(i.unit_price * i.qty) %></td></tr><% }) %></tbody></table>
       <dl class="mt-4 ml-auto max-w-xs text-sm space-y-1">
         <div class="flex justify-between"><dt>Subtotal</dt><dd><%= money(o.subtotal) %></dd></div>
-        <% if (o.discount) { %><div class="flex justify-between text-green-700"><dt>Discount <%= o.coupon_code ? '(' + o.coupon_code + ')' : '' %></dt><dd>-<%= money(o.discount) %></dd></div><% } %>
+        <% const prepaidOff = o.prepaid_discount || 0; const offerOff = o.offer_discount || 0; const couponOff = (o.discount || 0) - prepaidOff - offerOff; %>
+        <% if (couponOff > 0) { %><div class="flex justify-between text-green-700"><dt>Discount <%= o.coupon_code ? '(' + o.coupon_code + ')' : '' %></dt><dd>-<%= money(couponOff) %></dd></div><% } %>
+        <% if (offerOff > 0) { %><div class="flex justify-between text-green-700"><dt>Quantity offer</dt><dd>-<%= money(offerOff) %></dd></div><% } %>
+        <% if (prepaidOff > 0) { %><div class="flex justify-between text-green-700"><dt>Prepaid discount</dt><dd>-<%= money(prepaidOff) %></dd></div><% } %>
         <div class="flex justify-between"><dt>Shipping</dt><dd><%= money(o.shipping_fee) %></dd></div>
         <% if (o.cod_fee) { %><div class="flex justify-between"><dt>COD fee</dt><dd><%= money(o.cod_fee) %></dd></div><% } %>
         <div class="flex justify-between font-semibold border-t pt-1"><dt>Total</dt><dd><%= money(o.total) %></dd></div>
@@ -25,17 +28,43 @@
   </div>
 
   <div class="space-y-6">
+    <% if (o.status === 'ndr' || o.ndrNotes.length) { %>
+    <section class="a-card p-5 border-amber-200 bg-amber-50/40"><h2 class="a-h">Failed delivery (NDR)</h2>
+      <p class="text-sm text-neutral-600 mt-1">Attempts: <b><%= o.ndr_count || 0 %></b><%= o.ndr_reason ? ' · Courier says: ' + o.ndr_reason : '' %></p>
+      <% if (o.status === 'ndr') { %>
+      <div class="flex flex-wrap gap-2 mt-3"><a class="a-btn-o !border-green-300 !text-green-800" href="/admin/orders/<%= o.id %>/whatsapp-ndr" target="_blank" rel="noopener">Ask customer on WhatsApp</a><a class="a-btn-o" href="tel:+91<%= o.phone %>">Call <%= o.phone %></a></div>
+      <form method="post" action="/admin/orders/<%= o.id %>/ndr-note" class="mt-3 space-y-2">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <label class="a-lbl" for="ndr-reply">Customer's answer</label>
+        <select class="a-in" id="ndr-reply" name="reply"><% shipInfo.ndrReplies.forEach((r) => { %><option><%= r %></option><% }) %></select>
+        <input class="a-in" name="detail" placeholder="Details, e.g. 'nobody called, I was home all day' / 'deliver after 6 pm'">
+        <button class="a-btn w-full">Save reply</button>
+      </form>
+      <% } %>
+      <% if (o.ndrNotes.length) { %><ul class="mt-3 text-sm space-y-1"><% o.ndrNotes.forEach((n) => { %><li><span class="text-neutral-500"><%= dt(n.at) %> &middot; attempt <%= n.attempt %> &middot; <%= n.courier %>:</span> <%= n.reply %><%= n.detail ? ' - ' + n.detail : '' %></li><% }) %></ul><% } %>
+    </section>
+    <% } %>
+    <% if (o.status === 'pending_confirmation') { %>
+    <section class="a-card p-5 border-purple-200 bg-purple-50/40"><h2 class="a-h">Confirm this COD order</h2>
+      <p class="text-sm text-neutral-600 mt-1">It cannot be shipped until it is confirmed with the customer.</p>
+      <div class="flex flex-wrap gap-2 mt-3"><a class="a-btn-o !border-green-300 !text-green-800" href="/admin/orders/<%= o.id %>/whatsapp-confirm" target="_blank" rel="noopener">Message on WhatsApp</a><a class="a-btn-o" href="tel:+91<%= o.phone %>">Call <%= o.phone %></a></div>
+    </section>
+    <% } %>
     <section class="a-card p-5"><h2 class="a-h mb-3">Update status</h2>
       <% if (next.length) { %>
       <% next.forEach((s) => { %>
       <form method="post" action="/admin/orders/<%= o.id %>/status" class="border-t first:border-0 py-3 space-y-2" <% if (s === 'cancelled' || s === 'rto') { %>data-confirm="Are you sure? Stock will be restored."<% } %>>
         <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="status" value="<%= s %>">
-        <% if (s === 'shipped') { %>
-          <div class="grid grid-cols-2 gap-2"><div><label class="a-lbl">Courier</label><input class="a-in" name="courier" value="<%= o.courier || '' %>" placeholder="e.g. Delhivery" required></div><div><label class="a-lbl">AWB</label><input class="a-in" name="awb" value="<%= o.awb || '' %>" required></div></div>
+        <% if (s === 'shipped' && o.status === 'ndr') { %>
+          <input type="hidden" name="note" value="Re-attempt requested with the courier">
+        <% } else if (s === 'shipped') { %>
+          <p class="text-xs text-neutral-500">Shipping: <%= shipInfo.provider %></p>
+          <div class="grid grid-cols-2 gap-2"><div><label class="a-lbl">Courier</label><input class="a-in" name="courier" list="courier-list" value="<%= o.courier || '' %>" placeholder="e.g. Delhivery" required><datalist id="courier-list"><% shipInfo.couriers.forEach((c) => { %><option value="<%= c %>"><% }) %></datalist></div><div><label class="a-lbl">AWB</label><input class="a-in" name="awb" value="<%= o.awb || '' %>" required></div></div>
           <div><label class="a-lbl">Courier charge (your cost)</label><input class="a-in" type="number" step="0.01" name="courier_charge" value="<%= o.courier_charge || '' %>"></div>
         <% } %>
         <% if (s === 'cancelled' || s === 'rto') { %><input class="a-in" name="note" placeholder="Reason (optional)"><% } %>
-        <button class="<%= s === 'cancelled' || s === 'rto' ? 'a-btn-r' : 'a-btn' %> w-full">Mark as <%= statusLabel[s] %></button>
+        <% if (s === 'ndr') { %><input class="a-in" name="note" placeholder="Courier's reason, e.g. customer not available"><% } %>
+        <button class="<%= s === 'cancelled' || s === 'rto' ? 'a-btn-r' : 'a-btn' %> w-full"><%= s === 'shipped' && o.status === 'ndr' ? 'Re-attempt requested' : 'Mark as ' + statusLabel[s] %></button>
       </form>
       <% }) %>
       <p class="text-xs text-neutral-500">Shipped, out-for-delivery and delivered updates are sent to the customer on WhatsApp automatically.</p>
@@ -44,6 +73,8 @@
 
     <section class="a-card p-5 text-sm"><h2 class="a-h mb-3">Customer</h2>
       <p><b><%= o.name %></b></p><p><%= o.phone %> &middot; <%= o.email %></p>
+      <p class="mt-1 text-xs"><% if (o.risk.rtoCount) { %><span class="pill-red"><%= o.risk.rtoCount %> past RTO<%= o.risk.rtoCount > 1 ? 's' : '' %></span><% } else { %><span class="pill-green">No past RTO</span><% } %>
+        <% if (o.risk.blacklisted) { %> <span class="pill-red">COD blacklisted</span><% } %> <a class="underline text-neutral-500 ml-1" href="/admin/settings/cod#phones">COD rules</a></p>
       <p class="mt-2"><%= o.address %>, <%= o.city %>, <%= o.state %> - <%= o.pincode %></p>
       <% if (o.note) { %><p class="mt-2 text-neutral-600">Note: <%= o.note %></p><% } %>
       <p class="mt-2 text-xs text-neutral-500">Source: <%= o.utm_source || 'direct' %><%= o.utm_campaign ? ' / ' + o.utm_campaign : '' %></p>

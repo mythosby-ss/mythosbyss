@@ -7,15 +7,51 @@
   const method = () => (form.querySelector('input[name="paymentMethod"]:checked') || {}).value;
 
   function renderTotals() {
-    const p = pricing[method()] || pricing.cod;
+    const p = pricing[method()];
+    submit.disabled = !p;
+    if (!p) {
+      ['[data-total]', '[data-pay-now]', '[data-pay-due]'].forEach((s) => { $(s, form).textContent = '-'; });
+      submit.textContent = 'Choose a payment method';
+      return;
+    }
     $('[data-total]', form).textContent = money(p.total);
     $('[data-pay-now]', form).textContent = money(p.payNow);
     $('[data-pay-due]', form).textContent = money(p.dueOnDelivery);
     $('[data-cod-fee-row]', form).classList.toggle('hidden', !p.codFee);
+    $('[data-prepaid-row]', form).classList.toggle('hidden', !p.prepaidDiscount);
+    $('[data-prepaid-off]', form).textContent = '− ' + money(p.prepaidDiscount || 0);
     submit.textContent = p.payNow > 0 ? 'Pay ' + money(p.payNow) + ' & place order' : 'Place order (pay on delivery)';
   }
   $$('input[name="paymentMethod"]', form).forEach((r) => r.addEventListener('change', renderTotals));
   renderTotals();
+
+  // Payment options depend on the pincode (COD-blocked / non-serviceable pincodes). The server re-checks on submit.
+  function applyOptions(o) {
+    if (!o || !o.methods) return;
+    for (const k of Object.keys(o.methods)) {
+      const v = o.methods[k];
+      const box = form.querySelector('[data-method="' + k + '"]'); if (!box) continue;
+      const input = $('input', box); input.disabled = !v.ok;
+      if (!v.ok) input.checked = false;
+      $('[data-reason]', box).textContent = v.ok ? '' : v.reason;
+    }
+    if (!method() && o.selected) form.querySelector('input[name="paymentMethod"][value="' + o.selected + '"]').checked = true;
+    const pinErr = form.querySelector('[data-err="pincode"]');
+    if (pinErr && 'serviceable' in o) pinErr.textContent = o.serviceable === false ? o.pincodeMessage : '';
+    renderTotals();
+  }
+  const pinInput = form.elements.pincode;
+  let lastPin = pinInput.value;
+  pinInput.addEventListener('input', async () => {
+    const pin = pinInput.value.replace(/\D/g, '');
+    if (pin.length !== 6 || pin === lastPin) return;
+    lastPin = pin;
+    try {
+      const mode = form.dataset.mode === 'buynow' ? '&mode=buynow' : '';
+      const r = await fetch('/checkout/options?pincode=' + pin + mode, { headers: { Accept: 'application/json' } });
+      applyOptions(await r.json());
+    } catch (_) { /* the server re-checks on submit */ }
+  });
 
   const showErrors = (errors = {}) => {
     $$('[data-err]', form).forEach((el) => { el.textContent = errors[el.dataset.err] || ''; });
@@ -34,7 +70,7 @@
     try {
       const { status, data } = await post('/checkout/place', body);
       if (status === 401) return (window.location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search));
-      if (!data.ok) { showErrors(data.errors); showFormError(data.message); return setBusy(false); }
+      if (!data.ok) { showErrors(data.errors); showFormError(data.message); if (data.options) applyOptions({ methods: data.options }); return setBusy(false); }
       if (data.redirect) return (window.location.href = data.redirect); // COD
       openRazorpay(data);
     } catch (err) { showFormError('Network problem. Please check your connection and try again.'); setBusy(false); }

@@ -41,7 +41,8 @@
         <!-- LEFT: Banner Content -->
         <div class="order-2 md:order-1">
 
-          <h1
+          <%# only the first slide is the page's H1; the others are H2 (one H1 per page) %>
+          <<%= i === 0 ? 'h1' : 'h2' %>
             class="
               text-4xl
               sm:text-5xl
@@ -53,7 +54,7 @@
             "
           >
             <%= s.title %>
-          </h1>
+          </<%= i === 0 ? 'h1' : 'h2' %>>
 
           <p
             class="
@@ -122,6 +123,7 @@
             "
           >
 
+            <picture class="contents"><% const sw = webp(s.image); if (sw) { %><source srcset="<%= sw %>" type="image/webp"><% } %>
             <img
               src="<%= s.image || '/images/placeholder.svg' %>"
               alt="<%= s.title %>"
@@ -132,7 +134,8 @@
                 rounded-[2rem]
               "
               loading="<%= i === 0 ? 'eager' : 'lazy' %>"
-            >
+              <%= i === 0 ? 'fetchpriority=high' : '' %> decoding="async"
+            ></picture>
 
           </div>
 
@@ -252,7 +255,8 @@
 </section>
 <% } %>
 
-<!-- Customer reviews -->
+<!-- Customer reviews (real, approved reviews only; hidden until there are some) -->
+<% if (reviews.length) { %>
 <section class="mt-24 bg-paper py-16" aria-labelledby="reviews-h">
   <div class="container-x">
     <h2 id="reviews-h" class="text-3xl md:text-4xl font-semibold">What customers say</h2>
@@ -275,6 +279,7 @@
     </div>
   </div>
 </section>
+<% } %>
 
 <%- include('partials/ugc', { items: testimonials, heading: 'Real customers, real kitchens', sub: 'Customer videos and photos shared with reviews.' }) %>
 

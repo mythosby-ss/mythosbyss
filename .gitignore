@@ -1,4 +1,16 @@
 node_modules
-.env
-data/orders.json
 public/css/styles.css
+
+# Secrets: only .env.example (empty placeholders) is committed
+.env
+.env.*
+!.env.example
+
+# Local database and customer data - never commit
+data/*.db
+data/*.db-*
+data/orders.json
+
+# Backups made by npm run images:optimize
+data/image-originals/
+data/backups/

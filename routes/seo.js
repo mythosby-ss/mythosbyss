@@ -1,18 +1,33 @@
 const router = require('express').Router();
 const catalog = require('../lib/catalog');
+const xml = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c])).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
 const base = (req) => (process.env.SITE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
 
+// robots.txt: private / per-customer pages blocked; they also send noindex (lib/seo.js NOINDEX)
 router.get('/robots.txt', (req, res) => {
-  res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /cart\nDisallow: /checkout\nDisallow: /account\nDisallow: /login\n\nSitemap: ${base(req)}/sitemap.xml\n`);
+  const block = ['/admin', '/cart', '/checkout', '/account', '/login', '/order/', '/review/', '/track', '/api/', '/webhooks/', '/products?q=', '/*?q=', '/*&q='];
+  res.type('text/plain').set('Cache-Control', 'public, max-age=3600')
+    .send(`User-agent: *\nAllow: /\n${block.map((p) => `Disallow: ${p}`).join('\n')}\n\nSitemap: ${base(req)}/sitemap.xml\n`);
 });
+// sitemap.xml: built from the live catalogue, so new / removed products appear automatically
 router.get('/sitemap.xml', (req, res) => {
-  const b = base(req);
-  const urls = ['/', '/products', '/new-arrivals', ...catalog.categories.map((c) => `/collections/${c.slug}`), ...catalog.products.map((p) => `/products/${p.slug}`)];
-  res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `<url><loc>${b}${u}</loc></url>`).join('\n')}\n</urlset>`);
+  const b = base(req); const esc = (v) => xml(v);
+  const day = (iso) => (iso ? String(iso).slice(0, 10) : null);
+  const newest = catalog.products.reduce((m, p) => (day(p.updatedAt) && day(p.updatedAt) > m ? day(p.updatedAt) : m), '');
+  const abs = (u) => (u && u.startsWith('/') ? b + u : u);
+  const entries = [
+    { loc: '/', lastmod: newest }, { loc: '/products', lastmod: newest }, { loc: '/new-arrivals', lastmod: newest },
+    ...catalog.categories.filter((c) => c.count).map((c) => ({ loc: `/collections/${c.slug}`, lastmod: catalog.inCategory(c.slug).reduce((m, p) => (day(p.updatedAt) > m ? day(p.updatedAt) : m), '') })),
+    ...catalog.products.map((p) => ({ loc: `/products/${p.slug}`, lastmod: day(p.updatedAt), images: p.hasImage ? p.images.slice(0, 5).map((i) => ({ url: abs(i), title: p.name })) : [] })),
+    ...require('../lib/pages').slugs.map((s) => ({ loc: `/pages/${s}` }))
+  ];
+  res.type('application/xml').set('Cache-Control', 'public, max-age=900').send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+${entries.map((e) => `<url><loc>${esc(b + e.loc)}</loc>${e.lastmod ? `<lastmod>${e.lastmod}</lastmod>` : ''}${(e.images || []).map((i) => `<image:image><image:loc>${esc(i.url)}</image:loc><image:title>${esc(i.title)}</image:title></image:image>`).join('')}</url>`).join('\n')}
+</urlset>`);
 });
 // Product catalogue feed (Google Merchant RSS 2.0 format, also accepted by Meta Commerce Manager).
 // One item per variant, grouped by product. Public on purpose: Meta / Google fetch it on a schedule.
-const xml = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c])).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
 router.get('/feeds/products.xml', (req, res) => {
   const b = base(req); const abs = (u) => (u && u.startsWith('/') ? b + u : u);
   const brand = require('../lib/settings').get('store_name') || 'MythosBySS';

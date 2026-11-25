@@ -10,6 +10,7 @@
     </div>
   <% } else { %>
   <div class="mt-8 grid lg:grid-cols-[1fr_380px] gap-10">
+    <div>
     <ul class="divide-y divide-neutral-200 border-y border-neutral-200">
       <% cart.items.forEach((i) => { %>
       <li class="py-5 flex gap-4">
@@ -32,15 +33,39 @@
       </li>
       <% }) %>
     </ul>
+    <% if (addons.length) { %>
+    <section class="mt-8" aria-labelledby="addons-h">
+      <h2 id="addons-h" class="text-xl font-semibold">Add to your order</h2>
+      <div class="mt-4 grid sm:grid-cols-3 gap-4">
+        <% addons.forEach((a) => { const v = defaultVariant(a); %>
+        <form method="post" action="/cart/add" class="border border-neutral-200 rounded-xl p-3 flex sm:flex-col gap-3" data-track-add="<%= JSON.stringify({ id: v.sku, name: a.name, variant: v.label, price: v.price, qty: 1 }) %>">
+          <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="slug" value="<%= a.slug %>"><input type="hidden" name="sku" value="<%= v.sku %>"><input type="hidden" name="qty" value="1">
+          <img src="<%= a.image %>" alt="" class="w-20 h-20 sm:w-full sm:h-32 rounded-lg object-cover bg-paper" loading="lazy">
+          <div class="flex-1"><a href="/products/<%= a.slug %>" class="text-sm font-medium hover:underline"><%= a.name %></a><p class="text-sm"><b><%= money(v.price) %></b> <span class="line-through text-neutral-400 text-xs"><%= money(v.mrp) %></span></p>
+            <button class="btn-outline mt-2 px-4 py-2 text-sm w-full">+ Add</button></div>
+        </form>
+        <% }) %>
+      </div>
+    </section>
+    <% } %>
+    </div>
     <aside class="bg-paper rounded-2xl p-6 h-fit lg:sticky lg:top-28">
       <h2 class="text-xl font-semibold">Order summary</h2>
+      <% if (cart.freeShip) { %>
+      <div class="mt-4 text-sm" role="status">
+        <p><%- cart.freeShip.remaining > 0 ? 'Add <b>' + money(cart.freeShip.remaining) + '</b> more for <b>FREE delivery</b>' : '<b class="text-green-700">You get FREE delivery!</b>' %></p>
+        <div class="mt-2 h-2 rounded-full bg-neutral-200 overflow-hidden"><div class="h-full bg-green-600 rounded-full" style="width: <%= cart.freeShip.pct %>%"></div></div>
+      </div>
+      <% } %>
       <dl class="mt-4 space-y-2 text-sm">
         <div class="flex justify-between"><dt>Items (<%= cart.count %>)</dt><dd><%= money(cart.mrpTotal) %></dd></div>
         <div class="flex justify-between text-green-700"><dt>Discount</dt><dd>&minus; <%= money(cart.savings) %></dd></div>
+        <% cart.offers.forEach((o) => { %><div class="flex justify-between text-green-700"><dt>Buy <%= o.tier.qty %> offer: <%= o.name %></dt><dd>&minus; <%= money(o.off) %></dd></div><% }) %>
         <% if (coupon) { %><div class="flex justify-between text-green-700"><dt>Coupon <%= coupon.code %></dt><dd>&minus; <%= money(coupon.discount) %></dd></div><% } %>
         <div class="flex justify-between"><dt>Shipping</dt><dd><%= cart.shipping ? money(cart.shipping) : 'Free' %></dd></div>
-        <div class="flex justify-between border-t border-neutral-300 pt-3 text-base font-semibold"><dt>Total</dt><dd><%= money(cart.subtotal - (coupon ? coupon.discount : 0) + cart.shipping) %></dd></div>
+        <div class="flex justify-between border-t border-neutral-300 pt-3 text-base font-semibold"><dt>Total</dt><dd><%= money(cart.net - (coupon ? coupon.discount : 0) + cart.shipping) %></dd></div>
       </dl>
+      <% if (offers.prepaidDiscount) { %><p class="mt-4 text-sm bg-green-50 border border-green-200 text-green-800 rounded-lg p-3">Pay online at checkout &amp; save <strong><%= money(offers.prepaidDiscount) %></strong> more.</p><% } %>
       <form method="post" action="/cart/coupon" class="mt-5">
         <input type="hidden" name="_csrf" value="<%= csrf %>">
         <% if (coupon) { %><p class="text-sm text-green-700"><%= coupon.message %> <button name="remove" value="1" class="underline ml-1">Remove</button></p>

@@ -10,7 +10,8 @@
     "dev:css": "tailwindcss -i ./src/input.css -o ./public/css/styles.css --watch",
     "build:css": "tailwindcss -i ./src/input.css -o ./public/css/styles.css --minify",
     "postinstall": "npm run build:css",
-    "slugs": "node scripts/list-slugs.js"
+    "slugs": "node scripts/list-slugs.js",
+    "images:optimize": "node scripts/optimize-images.js"
   },
   "engines": {
     "node": ">=18"
@@ -27,6 +28,7 @@
     "multer": "^2.5.0",
     "pdfkit": "^0.20.2",
     "razorpay": "^2.9.4",
+    "sharp": "^0.33.5",
     "tailwindcss": "^3.4.17"
   },
   "devDependencies": {

@@ -6,7 +6,7 @@
   <title><%= title %> | MythosBySS Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/styles.css?v=<%= assetV %>">
 </head>
 <body class="bg-adm-bg text-[#1b1c1f] min-h-screen">
 <% const isAll = adminQuery.tab === 'all';
@@ -46,6 +46,8 @@
         <h1 class="text-lg font-semibold font-sans"><%= title %></h1>
       </div>
       <div class="flex items-center gap-3 text-sm">
+        <% if (alerts.ndr) { %><a href="/admin/orders?tab=ndr" class="hidden sm:inline pill pill-red"><%= alerts.ndr %> NDR</a><% } %>
+        <% if (alerts.toConfirm) { %><a href="/admin/orders?tab=confirm" class="hidden sm:inline pill pill-purple"><%= alerts.toConfirm %> to confirm</a><% } %>
         <% if (alerts.toShip) { %><a href="/admin/orders" class="hidden sm:inline pill pill-blue"><%= alerts.toShip %> to ship</a><% } %>
         <% if (alerts.lowStock) { %><a href="/admin/inventory?f=low" class="hidden sm:inline pill pill-amber"><%= alerts.lowStock %> low stock</a><% } %>
         <a href="/" target="_blank" rel="noopener" class="a-btn-o py-1.5">View store</a>

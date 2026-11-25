@@ -1,23 +1,25 @@
 <%- include('partials/header') %>
 <script type="application/json" id="mb-event"><%- JSON.stringify({ name: 'view_item', value: initial.price, items: [{ id: initial.sku, name: product.name, variant: initial.label, price: initial.price, qty: 1 }] }).replace(/</g, '\\u003c') %></script>
-<% const galleryImages = initial.images.length ? initial.images : product.images; %>
+<% // Gallery shows the WebP copy when one exists (all current browsers); feeds / WhatsApp previews keep the JPG/PNG
+   const disp = (u) => webp(u) || u;
+   const galleryImages = (initial.images.length ? initial.images : product.images).map(disp); %>
 <div class="container-x pt-6 text-sm text-neutral-500" aria-label="Breadcrumb">
   <a href="/" class="hover:text-ink">Home</a> / <a href="/collections/<%= product.category %>" class="hover:text-ink"><%= product.categoryName %></a> / <span class="text-ink"><%= product.name %></span>
 </div>
 
 <section class="container-x py-8 grid lg:grid-cols-2 gap-10 lg:gap-16"
   data-product
-  data-product-images="<%= JSON.stringify(product.images) %>"
-  data-variants="<%= JSON.stringify(product.variants.map(v => ({ sku: v.sku, price: v.price, mrp: v.mrp, label: v.label, code: v.code, pack: v.pack, stock: v.stock, images: v.images }))) %>">
+  data-product-images="<%= JSON.stringify(product.images.map(disp)) %>"
+  data-variants="<%= JSON.stringify(product.variants.map(v => ({ sku: v.sku, price: v.price, mrp: v.mrp, label: v.label, code: v.code, pack: v.pack, stock: v.stock, images: v.images.map(disp) }))) %>">
   <!-- Gallery -->
   <div data-gallery>
     <div class="aspect-square rounded-2xl overflow-hidden bg-paper border border-neutral-200">
-      <img data-main-image src="<%= galleryImages[0] %>" alt="<%= product.imageAlt %>" class="w-full h-full object-cover">
+      <img data-main-image src="<%= galleryImages[0] %>" alt="<%= product.imageAlt %>" class="w-full h-full object-cover" width="800" height="800" fetchpriority="high" decoding="async">
     </div>
     <% if (galleryImages.length > 1) { %>
     <div class="mt-3 grid grid-cols-5 gap-3">
       <% galleryImages.forEach((src, i) => { %>
-        <button type="button" data-thumb="<%= src %>" class="aspect-square rounded-lg overflow-hidden border <%= i === 0 ? 'border-ink' : 'border-neutral-200' %>" aria-label="Show image <%= i + 1 %>"><img src="<%= src %>" alt="" class="w-full h-full object-cover" loading="lazy"></button>
+        <button type="button" data-thumb="<%= src %>" class="aspect-square rounded-lg overflow-hidden border <%= i === 0 ? 'border-ink' : 'border-neutral-200' %>" aria-label="Show image <%= i + 1 %>"><img src="<%= src %>" alt="<%= product.imageAlt %> - image <%= i + 1 %>" class="w-full h-full object-cover" loading="lazy" decoding="async" width="160" height="160"></button>
       <% }) %>
     </div>
     <% } %>
@@ -31,10 +33,19 @@
 
     <p class="mt-5 flex items-baseline flex-wrap gap-3">
       <span data-price class="text-3xl font-semibold"><%= money(initial.price) %></span>
-      <span data-mrp class="text-lg text-neutral-400 line-through"><%= money(initial.mrp) %></span>
-      <span class="bg-gold text-white text-xs font-semibold px-2.5 py-1 rounded-full">Save <%= product.discount %>%</span>
+      <span data-mrp class="text-lg text-neutral-500 line-through"><%= money(initial.mrp) %></span>
+      <span class="bg-gold-dark text-white text-xs font-semibold px-2.5 py-1 rounded-full">Save <%= product.discount %>%</span>
     </p>
-    <p class="text-xs text-neutral-500 mt-1">Inclusive of all taxes. Free shipping.</p>
+    <p class="text-xs text-neutral-500 mt-1">Inclusive of all taxes. <%= !offers.shippingFee ? 'Free shipping.' : offers.freeShipThreshold ? 'Free delivery on orders above ' + money(offers.freeShipThreshold) + '.' : 'Delivery ' + money(offers.shippingFee) + '.' %></p>
+    <% if (offerTiers.length && !product.isBundle) { %><p class="mt-3 text-sm font-semibold text-gold-dark"><%= offerTiers.map((t) => 'Buy ' + t.qty + ', save ' + money(t.off)).join(' \u00B7 ') %></p><% } %>
+    <% if (initial.isBundle) { %>
+    <div class="mt-4 border border-gold-soft bg-paper rounded-xl p-4 text-sm">
+      <p class="font-semibold">This combo includes</p>
+      <ul class="mt-2 space-y-1"><% initial.components.forEach((c) => { %><li class="flex justify-between gap-3"><span><%= c.name %><%= c.label ? ' (' + c.label + ')' : '' %> &times; <%= c.qty %></span><span class="text-neutral-500"><%= money(c.price * c.qty) %></span></li><% }) %></ul>
+      <% if (initial.componentsValue > initial.price) { %><p class="mt-2 text-green-800 font-semibold">Worth <%= money(initial.componentsValue) %> separately &mdash; you save <%= money(initial.componentsValue - initial.price) %></p><% } %>
+    </div>
+    <% } %>
+    <% if (offers.prepaidDiscount) { %><p class="mt-3 inline-flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 text-sm font-semibold px-3 py-1.5 rounded-lg">Pay online &amp; save <%= money(offers.prepaidDiscount) %> extra</p><% } %>
 
     <form method="post" action="/cart/add" class="mt-6" data-buy-form>
       <input type="hidden" name="_csrf" value="<%= csrf %>">
@@ -82,12 +93,37 @@
 
     <ul class="mt-6 grid grid-cols-2 gap-3 text-sm text-neutral-700">
       <li class="flex gap-2"><span class="text-gold">&#10003;</span> BPA free, food grade</li>
-      <li class="flex gap-2"><span class="text-gold">&#10003;</span> Cash on delivery available</li>
-      <li class="flex gap-2"><span class="text-gold">&#10003;</span> Partial COD available</li>
+      <% if (offers.codEnabled) { %><li class="flex gap-2"><span class="text-gold">&#10003;</span> Cash on delivery available</li><% } %>
+      <% if (offers.partialEnabled) { %><li class="flex gap-2"><span class="text-gold">&#10003;</span> Partial COD: pay <%= offers.partialText %> now, rest on delivery</li><% } %>
+      <% if (offers.prepaidDiscount) { %><li class="flex gap-2"><span class="text-gold">&#10003;</span> Extra <%= money(offers.prepaidDiscount) %> off on online payment</li><% } %>
       <li class="flex gap-2"><span class="text-gold">&#10003;</span> 7-day damage replacement</li>
     </ul>
   </div>
 </section>
+
+<% if (addons.length) { const mainV = initial; const fbtTotal = mainV.price + addons.reduce((s, a) => s + defaultVariant(a).price, 0); %>
+<section class="container-x pt-6" aria-labelledby="fbt-h">
+  <form method="post" action="/cart/add-many" class="border border-neutral-200 rounded-2xl p-5" data-fbt>
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <h2 id="fbt-h" class="text-2xl font-semibold">Frequently bought together</h2>
+    <div class="mt-4 grid sm:grid-cols-[1fr_auto] gap-6 items-center">
+      <ul class="space-y-3">
+        <li><label class="flex items-center gap-3 text-sm"><input type="checkbox" name="add" value="<%= product.slug %>:<%= mainV.sku %>" data-price="<%= mainV.price %>" data-fbt-main checked class="accent-[#b07a2a]">
+          <img src="<%= product.image %>" alt="" class="w-12 h-12 rounded-lg object-cover bg-paper" loading="lazy"><span class="flex-1"><b>This item:</b> <%= product.name %></span><b><%= money(mainV.price) %></b></label></li>
+        <% addons.forEach((a) => { const v = defaultVariant(a); %>
+        <li><label class="flex items-center gap-3 text-sm"><input type="checkbox" name="add" value="<%= a.slug %>:<%= v.sku %>" data-price="<%= v.price %>" checked class="accent-[#b07a2a]">
+          <img src="<%= a.image %>" alt="" class="w-12 h-12 rounded-lg object-cover bg-paper" loading="lazy"><a href="/products/<%= a.slug %>" class="flex-1 hover:underline"><%= a.name %><%= a.multi ? ' (' + v.label + ')' : '' %></a><b><%= money(v.price) %></b></label></li>
+        <% }) %>
+      </ul>
+      <div class="text-center sm:text-right">
+        <p class="text-sm text-neutral-600">Total for selected</p>
+        <p class="text-2xl font-semibold" data-fbt-total><%= money(fbtTotal) %></p>
+        <button class="btn-dark mt-3 px-6 py-3" data-fbt-btn>Add selected to cart</button>
+      </div>
+    </div>
+  </form>
+</section>
+<% } %>
 
 <!-- Details -->
 <section class="container-x pt-6 grid lg:grid-cols-2 gap-10">
@@ -116,16 +152,22 @@
   </div>
 </section>
 
-<% if (reviews.length) { %>
-<section class="container-x pt-14">
-  <h2 class="text-2xl font-semibold">Customer reviews</h2>
+<!-- Reviews: only real reviews from customers who received their order (review link sent on WhatsApp after delivery, approved in admin) -->
+<section class="container-x pt-14" id="reviews" aria-labelledby="reviews-h">
+  <h2 id="reviews-h" class="text-2xl font-semibold">Customer reviews</h2>
+  <% if (reviews.length) { const avgR = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length; %>
+  <p class="mt-2 flex items-center gap-2 text-sm"><%- include('partials/stars', { n: Math.round(avgR) }) %> <b><%= avgR.toFixed(1) %> out of 5</b> <span class="text-neutral-600">from <%= reviews.length %> review<%= reviews.length > 1 ? 's' : '' %></span></p>
   <div class="mt-5 grid md:grid-cols-2 gap-5">
     <% reviews.forEach((r) => { %>
-      <div class="border border-neutral-200 rounded-xl p-5"><%- include('partials/stars', { n: r.rating }) %><p class="font-display text-lg mt-2"><%= r.title %></p><p class="text-sm text-neutral-700 mt-1"><%= r.body %></p><p class="text-sm mt-3 font-semibold"><%= r.customer_name %> <span class="font-normal text-neutral-500">from <%= r.city %></span></p></div>
+      <div class="border border-neutral-200 rounded-xl p-5"><%- include('partials/stars', { n: r.rating }) %><% if (r.title) { %><p class="font-display text-lg mt-2"><%= r.title %></p><% } %><% if (r.body) { %><p class="text-sm text-neutral-700 mt-1"><%= r.body %></p><% } %>
+        <% if (r.photoUrl) { %><img src="<%= r.photoUrl %>" alt="Photo from <%= r.customer_name %>" loading="lazy" decoding="async" class="mt-3 w-28 h-28 rounded-lg object-cover"><% } %>
+        <p class="text-sm mt-3 font-semibold"><%= String(r.customer_name || 'Customer').split(' ')[0] %><% if (r.city) { %> <span class="font-normal text-neutral-500">from <%= r.city %></span><% } %><% if (r.order_id) { %> <span class="ml-1 text-xs font-medium text-green-700 bg-green-50 rounded-full px-2 py-0.5">&#10003; Verified buyer</span><% } %></p></div>
     <% }) %>
   </div>
+  <% } else { %>
+  <p class="mt-3 text-sm text-neutral-600">No reviews yet. Only customers who have received this product can review it &mdash; we send the review link on WhatsApp after delivery.</p>
+  <% } %>
 </section>
-<% } %>
 
 <%- include('partials/ugc', { items: testimonials, heading: 'See it in real homes', sub: 'Customer videos' }) %>
 
@@ -138,5 +180,4 @@
 </section>
 <% } %>
 
-<script type="application/ld+json"><%- JSON.stringify({ '@context': 'https://schema.org', '@type': 'Product', name: product.name, description: product.description, brand: { '@type': 'Brand', name: 'MythosBySS' }, sku: initial.sku, offers: { '@type': 'AggregateOffer', priceCurrency: 'INR', lowPrice: product.price, offerCount: product.variants.length, availability: product.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock' } }).replace(/</g, '\\u003c') %></script>
 <%- include('partials/footer') %>

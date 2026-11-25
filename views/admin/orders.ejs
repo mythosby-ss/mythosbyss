@@ -16,6 +16,8 @@
   <form method="post" action="/admin/orders/bulk" id="bulk">
     <input type="hidden" name="_csrf" value="<%= csrf %>">
     <% if (tab === 'pending') { %><div class="px-4 pb-3"><button class="a-btn-o" form="bulk">Mark selected as packed</button></div><% } %>
+    <% if (tab === 'ndr') { %><p class="px-4 pb-3 text-sm text-neutral-600">The courier says delivery failed. Message the customer the same day, record what they say (e.g. "courier never came" is proof for escalating to the courier), then request a re-attempt or mark RTO.</p><% } %>
+    <% if (tab === 'confirm') { %><p class="px-4 pb-3 text-sm text-neutral-600">Cash-on-delivery orders are not shipped until confirmed. Message the customer on WhatsApp (or call), then confirm or cancel.<%= autoCancelHours > 0 ? ` Orders not confirmed within ${autoCancelHours} hours are cancelled automatically.` : '' %></p><% } %>
     <div class="overflow-x-auto"><table class="a-table min-w-[980px]">
       <thead><tr><th class="w-8"><input type="checkbox" data-select-all aria-label="Select all"></th><th>Order</th><th>Product</th><th>Payment</th><th>Customer</th><th>Shipping</th><th></th></tr></thead>
       <tbody>
@@ -27,12 +29,56 @@
           <td><%- pill(o.payment_method.replace('_', ' ').toUpperCase(), 'gray') %><br><b><%= money(o.total) %></b><br><span class="text-xs text-neutral-500">Collect <%= money(o.due_on_delivery) %></span><br><%- pill(o.payment_status) %></td>
           <td><%= o.name %><br><span class="text-xs"><%= o.phone %></span><br><span class="text-xs text-neutral-500"><%= o.city %>, <%= o.state %> <%= o.pincode %></span></td>
           <td><% if (o.awb) { %><span class="text-xs">AWB <b><%= o.awb %></b><br><%= o.courier %> &middot; <%= money(o.courier_charge) %></span><% } else { %><span class="text-xs text-neutral-400">Not assigned</span><% } %></td>
+          <% if (tab === 'confirm') { const back = '/admin/orders?tab=confirm'; const ageH = Math.floor((Date.now() - new Date(o.created_at)) / 36e5); %>
+          <td class="min-w-[250px]">
+            <p class="text-xs mb-2">
+              <% if (o.history.orders) { %>Past orders: <b><%= o.history.orders %></b> &middot; delivered <%= o.history.delivered || 0 %><% if (o.history.rto) { %> &middot; <span class="pill-red"><%= o.history.rto %> RTO</span><% } %><% } else { %><span class="pill-blue">New customer</span><% } %>
+              <br><span class="text-neutral-500">Placed <%= ageH %>h ago<%= autoCancelHours > 0 ? ` · auto-cancel in ${Math.max(0, autoCancelHours - ageH)}h` : '' %> · messaged <%= o.waTries %>&times;</span></p>
+            <div class="flex flex-wrap gap-2">
+              <a class="a-btn-o !border-green-300 !text-green-800" href="<%= o.waLink %>" target="_blank" rel="noopener">WhatsApp</a>
+              <a class="a-btn-o" href="tel:+91<%= o.phone %>">Call</a>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-2">
+              <button class="a-btn" form="st-ok-<%= o.id %>">Confirmed</button>
+              <button class="a-btn-r" form="st-no-<%= o.id %>">Cancel &ndash; not reachable</button>
+            </div>
+          </td>
+          <% } else if (tab === 'ndr') { const f = 'ndr-' + o.id; %>
+          <td class="min-w-[300px]">
+            <p class="text-xs mb-2"><span class="pill-amber">Attempt <%= o.ndr_count || 1 %></span> <%= o.ndr_reason || '' %><br>
+              <span class="text-neutral-500"><%= o.courier || '' %> <%= o.awb || '' %> &middot; <%= dt(o.ndr_at) %> &middot; messaged <%= o.waTries %>&times;</span>
+              <% if (o.lastReply) { %><br><b>Customer:</b> <%= o.lastReply.reply %><%= o.lastReply.detail ? ' - ' + o.lastReply.detail : '' %><% } %></p>
+            <div class="flex flex-wrap gap-2">
+              <a class="a-btn-o !border-green-300 !text-green-800" href="/admin/orders/<%= o.id %>/whatsapp-ndr" target="_blank" rel="noopener">WhatsApp</a>
+              <a class="a-btn-o" href="tel:+91<%= o.phone %>">Call</a>
+            </div>
+            <div class="flex gap-2 mt-2">
+              <select class="a-in !py-1 text-xs" name="reply" form="<%= f %>-reply" aria-label="Customer reply"><% ndrReplies.forEach((r) => { %><option><%= r %></option><% }) %></select>
+              <input class="a-in !py-1 text-xs" name="detail" form="<%= f %>-reply" placeholder="Details / new time" aria-label="Details">
+              <button class="a-btn-o !py-1 text-xs" form="<%= f %>-reply">Save</button>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-2">
+              <button class="a-btn !py-1 text-xs" form="<%= f %>-again">Re-attempt requested</button>
+              <button class="a-btn-r !py-1 text-xs" form="<%= f %>-rto">Mark RTO</button>
+            </div>
+          </td>
+          <% } else { %>
           <td class="whitespace-nowrap"><a class="a-btn-o" href="/admin/orders/<%= o.id %>">Manage</a> <a class="a-btn-o" href="/admin/orders/<%= o.id %>/label" download>Label PDF</a></td>
+          <% } %>
         </tr>
       <% }) %>
       <% if (!list.length) { %><tr><td colspan="7" class="text-center text-neutral-500 py-10">No orders here.</td></tr><% } %>
       </tbody></table></div>
   </form>
+  <% if (tab === 'ndr') list.forEach((o) => { const f = 'ndr-' + o.id; const hid = `<input type="hidden" name="_csrf" value="${csrf}"><input type="hidden" name="back" value="/admin/orders?tab=ndr">`; %>
+    <form id="<%= f %>-reply" method="post" action="/admin/orders/<%= o.id %>/ndr-note" class="hidden"><%- hid %></form>
+    <form id="<%= f %>-again" method="post" action="/admin/orders/<%= o.id %>/status" class="hidden"><%- hid %><input type="hidden" name="status" value="shipped"><input type="hidden" name="note" value="Re-attempt requested with the courier"></form>
+    <form id="<%= f %>-rto" method="post" action="/admin/orders/<%= o.id %>/status" class="hidden" data-confirm="Mark <%= o.id %> as RTO (returned)? Stock will be restored when it comes back."><%- hid %><input type="hidden" name="status" value="rto"><input type="hidden" name="note" value="RTO after failed delivery"></form>
+  <% }) %>
+  <% if (tab === 'confirm') list.forEach((o) => { %>
+    <form id="st-ok-<%= o.id %>" method="post" action="/admin/orders/<%= o.id %>/status" class="hidden"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="status" value="confirmed"><input type="hidden" name="note" value="Confirmed with customer"><input type="hidden" name="back" value="/admin/orders?tab=confirm"></form>
+    <form id="st-no-<%= o.id %>" method="post" action="/admin/orders/<%= o.id %>/status" class="hidden" data-confirm="Cancel order <%= o.id %>? Stock will be restored."><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="status" value="cancelled"><input type="hidden" name="note" value="Customer not reachable for confirmation"><input type="hidden" name="back" value="/admin/orders?tab=confirm"></form>
+  <% }) %>
   <% if (pages > 1) { %><div class="p-4 flex gap-2 text-sm"><% for (let i = 1; i <= pages; i++) { %><a class="px-3 py-1 rounded border <%= i === page ? 'bg-adm-blue text-white border-adm-blue' : 'border-neutral-300' %>" href="?tab=<%= tab %>&q=<%= encodeURIComponent(q) %>&method=<%= method %>&page=<%= i %>"><%= i %></a><% } %></div><% } %>
 </div>
 <%- include('partials/bottom') %>

@@ -7,7 +7,7 @@ const crypto = require('crypto');
 router.get('/', async (req, res, next) => {
   try {
     const unsettled = await db.one("SELECT COUNT(*) n, SUM(due_on_delivery) amt, SUM(courier_charge) exp FROM orders WHERE status='delivered' AND payment_method!='prepaid' AND cod_settlement_id IS NULL");
-    const transit = await db.one("SELECT COUNT(*) n, SUM(due_on_delivery) amt FROM orders WHERE status IN ('shipped','out_for_delivery') AND payment_method!='prepaid'");
+    const transit = await db.one("SELECT COUNT(*) n, SUM(due_on_delivery) amt FROM orders WHERE status IN ('shipped','out_for_delivery','ndr') AND payment_method!='prepaid'");
     const prepaid = await db.one(`SELECT COUNT(*) n, SUM(pay_now) amt FROM orders WHERE payment_status IN ('paid','advance_paid','refunded','partially_refunded') AND payment_method!='cod'`);
     const refunds = await db.one('SELECT COUNT(*) n, SUM(amount) amt FROM refunds');
     const settled = await db.one("SELECT COUNT(*) n, SUM(net_amount) amt FROM settlements WHERE status='paid'");

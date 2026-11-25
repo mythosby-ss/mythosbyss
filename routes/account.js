@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const db = require('../lib/db');
 const orders = require('../lib/orders');
+const rateLimit = require('express-rate-limit');
 
 const needLogin = (req, res, next) => (res.locals.customer ? next() : res.redirect('/login?next=' + encodeURIComponent(req.originalUrl)));
 
@@ -14,7 +15,25 @@ router.post('/account/profile', needLogin, async (req, res) => {
   await db.run('UPDATE customers SET name=?, email=? WHERE id=?', [String(req.body.name || '').trim().slice(0, 80), String(req.body.email || '').trim().slice(0, 120), res.locals.customer.id]);
   res.redirect('/account?saved=1');
 });
-router.get('/track', (req, res) => res.redirect('/account'));
+// Public order tracking: order ID + the mobile number used at checkout. Shows status and items only (no address).
+const trackLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false });
+const renderTrack = (res, extra = {}) => res.render('track', { pageTitle: 'Track your order | MythosBySS', noindex: true, error: null, result: null, form: {}, statusLabel: orders.STATUS_LABEL, ...extra });
+router.get('/track', (req, res) => renderTrack(res, { form: { orderId: String(req.query.order || '').slice(0, 30) } }));
+router.post('/track', trackLimit, async (req, res, next) => {
+  try {
+    const orderId = String(req.body.orderId || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 30);
+    const phone = String(req.body.phone || '').replace(/\D/g, '').slice(-10);
+    const form = { orderId, phone };
+    if (!orderId || phone.length !== 10) return renderTrack(res, { form, error: 'Enter your order ID and the 10-digit mobile number used for the order.' });
+    // order IDs are stored in capitals and the input is upper-cased above, so this uses the primary key (no table scan)
+    const o = await db.one('SELECT * FROM orders WHERE id=? AND phone=?', [orderId, phone]);
+    if (!o) return renderTrack(res, { form, error: 'We could not find an order with that ID and mobile number. Please check both, or message us on WhatsApp.' });
+    const items = await db.q('SELECT product_name, variant_label, qty FROM order_items WHERE order_id=?', [o.id]);
+    const result = { id: o.id, status: o.status, createdAt: o.created_at, courier: o.courier, awb: o.awb, items, due: o.status === 'delivered' ? 0 : o.due_on_delivery,
+      paymentMethod: orders.METHOD_LABEL[o.payment_method], cancelReason: o.cancel_reason, deliveredAt: o.delivered_at };
+    renderTrack(res, { form, result });
+  } catch (e) { next(e); }
+});
 
 // Review request link sent on WhatsApp after delivery. The secret token identifies the order.
 router.get('/review/:token', async (req, res, next) => {

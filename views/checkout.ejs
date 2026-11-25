@@ -15,11 +15,12 @@
           <div class="sm:col-span-2"><label class="label" for="name">Full name</label><input class="field" id="name" name="name" autocomplete="name" required value="<%= profile.name || '' %>"><p class="err text-xs text-red-600 mt-1" data-err="name"></p></div>
           <div><label class="label" for="email">Email</label><input class="field" id="email" name="email" type="email" autocomplete="email" required value="<%= profile.email || '' %>"><p class="err text-xs text-red-600 mt-1" data-err="email"></p></div>
           <div><label class="label" for="phone">WhatsApp number (verified)</label><input class="field bg-neutral-50" id="phone" value="+91 <%= profile.phone %>" readonly aria-readonly="true"></div>
-          <div class="sm:col-span-2"><label class="label" for="line1">Address</label><input class="field" id="line1" name="line1" autocomplete="address-line1" placeholder="House no., building, street" required value="<%= saved.line1 || '' %>"><p class="err text-xs text-red-600 mt-1" data-err="line1"></p></div>
-          <div class="sm:col-span-2"><label class="label" for="line2">Landmark <span class="text-neutral-500 font-normal">(optional)</span></label><input class="field" id="line2" name="line2" autocomplete="address-line2" value="<%= saved.line2 || '' %>"></div>
-          <div><label class="label" for="pincode">Pincode</label><input class="field" id="pincode" name="pincode" inputmode="numeric" maxlength="6" autocomplete="postal-code" required value="<%= saved.pincode || '' %>"><p class="err text-xs text-red-600 mt-1" data-err="pincode"></p></div>
+          <div><label class="label" for="pincode">Pincode</label><input class="field" id="pincode" name="pincode" inputmode="numeric" maxlength="6" autocomplete="postal-code" required value="<%= saved.pincode || '' %>"><p class="err text-xs text-red-600 mt-1" data-err="pincode"><%= pincodeMessage || '' %></p></div>
+          <div><label class="label" for="house">House / flat no. &amp; building</label><input class="field" id="house" name="house" autocomplete="address-line1" placeholder="e.g. Flat 302, Shanti Apartments" required value="<%= saved.house || '' %>"><p class="err text-xs text-red-600 mt-1" data-err="house"></p></div>
+          <div class="sm:col-span-2"><label class="label" for="line1">Street, area / locality</label><input class="field" id="line1" name="line1" autocomplete="address-line2" placeholder="e.g. MG Road, Sector 14" required value="<%= saved.line1 || '' %>"><p class="err text-xs text-red-600 mt-1" data-err="line1"></p></div>
+          <div class="sm:col-span-2"><label class="label" for="landmark">Landmark<% if (!requireLandmark) { %> <span class="text-neutral-500 font-normal">(optional)</span><% } %></label><input class="field" id="landmark" name="landmark" placeholder="e.g. Near Hanuman Mandir" <%= requireLandmark ? 'required' : '' %> value="<%= saved.landmark || '' %>"><p class="err text-xs text-red-600 mt-1" data-err="landmark"></p></div>
           <div><label class="label" for="city">City</label><input class="field" id="city" name="city" autocomplete="address-level2" required value="<%= saved.city || '' %>"><p class="err text-xs text-red-600 mt-1" data-err="city"></p></div>
-          <div class="sm:col-span-2"><label class="label" for="state">State</label>
+          <div><label class="label" for="state">State</label>
             <select class="field" id="state" name="state" autocomplete="address-level1" required>
               <option value="">Select state</option>
               <% states.forEach((s) => { %><option value="<%= s %>" <%= saved.state === s ? 'selected' : '' %>><%= s %></option><% }) %>
@@ -30,18 +31,27 @@
 
       <fieldset>
         <legend class="text-2xl font-semibold">Payment method</legend>
+        <%
+          const card = 'flex gap-4 items-start border border-neutral-300 rounded-xl p-4 cursor-pointer has-[:checked]:border-ink has-[:checked]:bg-paper has-[:disabled]:opacity-60 has-[:disabled]:cursor-not-allowed';
+          const opt = (k) => options[k] || { ok: false, reason: '' };
+        %>
         <div class="mt-5 space-y-3">
-          <label class="flex gap-4 items-start border border-neutral-300 rounded-xl p-4 cursor-pointer has-[:checked]:border-ink has-[:checked]:bg-paper">
-            <input type="radio" name="paymentMethod" value="prepaid" class="mt-1 accent-[#b07a2a]" <%= onlineEnabled ? 'checked' : 'disabled' %>>
-            <span class="flex-1"><span class="block font-semibold">Pay online</span><span class="block text-sm text-neutral-600">UPI, cards, netbanking and wallets via Razorpay. Pay <%= money(pricing.prepaid.total) %> now.</span><% if (!onlineEnabled) { %><span class="block text-xs text-red-600 mt-1">Temporarily unavailable.</span><% } %></span>
+          <label class="<%= card %>" data-method="prepaid">
+            <input type="radio" name="paymentMethod" value="prepaid" class="mt-1 accent-[#b07a2a]" <%= opt('prepaid').ok ? '' : 'disabled' %> <%= selected === 'prepaid' ? 'checked' : '' %>>
+            <span class="flex-1"><span class="flex flex-wrap items-center gap-2 font-semibold">Pay online<% if (pricing.prepaid.prepaidDiscount) { %> <span class="bg-green-100 text-green-800 text-xs font-semibold px-2 py-0.5 rounded-full">Save <%= money(pricing.prepaid.prepaidDiscount) %></span><% } %></span>
+              <span class="block text-sm text-neutral-600">UPI, cards, netbanking and wallets via Razorpay. Pay <%= money(pricing.prepaid.total) %> now<% if (pricing.prepaid.prepaidDiscount) { %> &mdash; <strong class="text-green-800"><%= money(pricing.prepaid.prepaidDiscount) %> off</strong> for paying online<% } %>.</span>
+              <span class="block text-xs text-red-600 mt-1" data-reason><%= opt('prepaid').ok ? '' : opt('prepaid').reason %></span></span>
           </label>
-          <label class="flex gap-4 items-start border border-neutral-300 rounded-xl p-4 cursor-pointer has-[:checked]:border-ink has-[:checked]:bg-paper">
-            <input type="radio" name="paymentMethod" value="partial_cod" class="mt-1 accent-[#b07a2a]" <%= onlineEnabled ? '' : 'disabled' %>>
-            <span class="flex-1"><span class="block font-semibold">Partial COD</span><span class="block text-sm text-neutral-600">Pay <%= partialPercent %>% (<%= money(pricing.partial_cod.payNow) %>) online now to confirm. Pay the remaining <%= money(pricing.partial_cod.dueOnDelivery) %> in cash on delivery.</span></span>
+          <label class="<%= card %>" data-method="partial_cod">
+            <input type="radio" name="paymentMethod" value="partial_cod" class="mt-1 accent-[#b07a2a]" <%= opt('partial_cod').ok ? '' : 'disabled' %> <%= selected === 'partial_cod' ? 'checked' : '' %>>
+            <span class="flex-1"><span class="flex flex-wrap items-center gap-2 font-semibold">Partial COD <span class="bg-gold-soft text-gold-dark text-xs font-semibold px-2 py-0.5 rounded-full">Recommended</span></span>
+              <span class="block text-sm text-neutral-600">Pay just <%= money(pricing.partial_cod.payNow) %> online now to confirm your order. Pay the remaining <%= money(pricing.partial_cod.dueOnDelivery) %> in cash on delivery.</span>
+              <span class="block text-xs text-red-600 mt-1" data-reason><%= opt('partial_cod').ok ? '' : opt('partial_cod').reason %></span></span>
           </label>
-          <label class="flex gap-4 items-start border border-neutral-300 rounded-xl p-4 cursor-pointer has-[:checked]:border-ink has-[:checked]:bg-paper">
-            <input type="radio" name="paymentMethod" value="cod" class="mt-1 accent-[#b07a2a]" <%= onlineEnabled ? '' : 'checked' %>>
-            <span class="flex-1"><span class="block font-semibold">Cash on delivery</span><span class="block text-sm text-neutral-600">Pay <%= money(pricing.cod.total) %> in cash when your order arrives.<% if (codFee) { %> Includes a <%= money(codFee) %> COD fee.<% } %></span></span>
+          <label class="<%= card %>" data-method="cod">
+            <input type="radio" name="paymentMethod" value="cod" class="mt-1 accent-[#b07a2a]" <%= opt('cod').ok ? '' : 'disabled' %> <%= selected === 'cod' ? 'checked' : '' %>>
+            <span class="flex-1"><span class="block font-semibold">Cash on delivery</span><span class="block text-sm text-neutral-600">Pay <%= money(pricing.cod.total) %> in cash when your order arrives.<% if (codFee) { %> Includes a <%= money(codFee) %> COD fee.<% } %></span>
+              <span class="block text-xs text-red-600 mt-1" data-reason><%= opt('cod').ok ? '' : opt('cod').reason %></span></span>
           </label>
         </div>
       </fieldset>
@@ -61,10 +71,12 @@
       </ul>
       <dl class="mt-4 space-y-2 text-sm border-t border-neutral-300 pt-4">
         <div class="flex justify-between"><dt>Subtotal</dt><dd><%= money(cart.subtotal) %></dd></div>
+        <% cart.offers.forEach((o) => { %><div class="flex justify-between text-green-700"><dt>Buy <%= o.tier.qty %> offer</dt><dd>&minus; <%= money(o.off) %></dd></div><% }) %>
         <% if (discount) { %><div class="flex justify-between text-green-700"><dt>Coupon <%= couponCode %></dt><dd>&minus; <%= money(discount) %></dd></div><% } %>
+        <div class="flex justify-between text-green-700 hidden" data-prepaid-row><dt>Prepaid discount</dt><dd data-prepaid-off></dd></div>
         <div class="flex justify-between"><dt>Shipping</dt><dd><%= cart.shipping ? money(cart.shipping) : 'Free' %></dd></div>
         <div class="flex justify-between hidden" data-cod-fee-row><dt>COD fee</dt><dd><%= money(codFee) %></dd></div>
-        <div class="flex justify-between text-base font-semibold border-t border-neutral-300 pt-3"><dt>Total</dt><dd data-total><%= money(pricing.prepaid.total) %></dd></div>
+        <div class="flex justify-between text-base font-semibold border-t border-neutral-300 pt-3"><dt>Total</dt><dd data-total></dd></div>
         <div class="flex justify-between text-green-800"><dt>Pay now</dt><dd data-pay-now></dd></div>
         <div class="flex justify-between"><dt>Pay on delivery</dt><dd data-pay-due></dd></div>
       </dl>

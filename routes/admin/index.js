@@ -22,10 +22,12 @@ router.use((req, res, next) => {
   res.locals.nav = nav; res.locals.adminPath = req.baseUrl + req.path; res.locals.adminQuery = req.query; res.locals.noindex = true;
   res.locals.flash = req.session.flash || null; req.session.flash = null;
   res.locals.pageTitle = 'Admin | MythosBySS';
+  // Any admin save clears the storefront cache (banners, reviews, testimonials, add-ons), so changes show immediately
+  if (req.method === 'POST') res.on('finish', () => require('../../lib/cache').clear());
   next();
 });
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const SC = { awaiting_payment: 'amber', confirmed: 'blue', packed: 'blue', shipped: 'blue', out_for_delivery: 'amber', delivered: 'green', cancelled: 'red', rto: 'red', paid: 'green', advance_paid: 'amber', cod_pending: 'gray', cod_collected: 'green', pending: 'amber', failed: 'red', refunded: 'red', partially_refunded: 'amber', sent: 'blue', delivered_wa: 'green', read: 'green', simulated: 'gray', scheduled: 'amber', published: 'green', draft: 'gray', approved: 'green', rejected: 'red', active: 'green', paused: 'gray' };
+const SC = { ndr: 'red', awaiting_payment: 'amber', pending_confirmation: 'purple', confirmed: 'blue', packed: 'blue', shipped: 'blue', out_for_delivery: 'amber', delivered: 'green', cancelled: 'red', rto: 'red', paid: 'green', advance_paid: 'amber', cod_pending: 'gray', cod_collected: 'green', pending: 'amber', failed: 'red', refunded: 'red', partially_refunded: 'amber', sent: 'blue', delivered_wa: 'green', read: 'green', simulated: 'gray', scheduled: 'amber', published: 'green', draft: 'gray', approved: 'green', rejected: 'red', active: 'green', paused: 'gray' };
 router.use((req, res, next) => {
   res.locals.esc = esc;
   res.locals.pill = (t, c) => `<span class="pill pill-${c || SC[t] || 'gray'}">${esc(String(t).replace(/_/g, ' '))}</span>`;
@@ -38,7 +40,7 @@ router.use((req, res, next) => {
 // helper: flash + redirect
 router.use((req, res, next) => { res.flash = (msg, type = 'ok') => { req.session.flash = { msg, type }; }; next(); });
 router.use(async (req, res, next) => {
-  try { res.locals.alerts = { lowStock: await db.val('SELECT COUNT(*) FROM variants WHERE stock <= low_stock AND active=1'), toShip: await db.val("SELECT COUNT(*) FROM orders WHERE status IN ('confirmed','packed')") }; next(); } catch (e) { next(e); }
+  try { res.locals.alerts = { lowStock: await db.val('SELECT COUNT(*) FROM variants WHERE stock <= low_stock AND active=1 AND sku NOT IN (SELECT bundle_sku FROM bundle_items)'), toShip: await db.val("SELECT COUNT(*) FROM orders WHERE status IN ('confirmed','packed')"), toConfirm: await db.val("SELECT COUNT(*) FROM orders WHERE status='pending_confirmation'"), ndr: await db.val("SELECT COUNT(*) FROM orders WHERE status='ndr'") }; next(); } catch (e) { next(e); }
 });
 
 router.use('/', require('./dashboard'));
@@ -51,6 +53,10 @@ router.use('/', require('./website'));
 router.use('/', require('./communication'));
 router.use('/', require('./plugins'));
 router.use('/', require('./settings'));
+router.use('/', require('./cod'));
+router.use('/', require('./offers'));
+router.use('/', require('./profit'));
+router.use('/', require('./pages'));
 
 router.use((req, res) => res.status(404).render('admin/notfound', { title: 'Not found' }));
 module.exports = router;

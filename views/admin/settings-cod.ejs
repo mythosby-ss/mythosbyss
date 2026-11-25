@@ -1,0 +1,154 @@
+<%- include('partials/top') %>
+<% const chk = (k) => (s[k] === '1' ? 'checked' : ''); const sel = (k, v) => (s[k] === v ? 'selected' : ''); %>
+<div class="space-y-6 max-w-5xl">
+
+<form method="post" action="/admin/settings/cod" class="a-card p-5 space-y-6">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <div>
+    <h2 class="a-h">COD &amp; RTO rules</h2>
+    <p class="text-sm text-neutral-500 mt-1">These rules decide which payment methods each customer sees at checkout. They are checked again on the server when the order is placed.</p>
+  </div>
+
+  <section class="space-y-3">
+    <h3 class="text-sm font-semibold">Prepaid incentive</h3>
+    <div class="grid md:grid-cols-3 gap-4">
+      <div><label class="a-lbl" for="prepaid_discount">Prepaid discount (₹, 0 = off)</label><input class="a-in" type="number" min="0" id="prepaid_discount" name="prepaid_discount" value="<%= s.prepaid_discount %>">
+        <p class="text-xs text-neutral-400 mt-1">Shown as "Pay online &amp; save ₹X" on product, cart and checkout.</p></div>
+      <div><label class="a-lbl" for="default_payment_method">Pre-selected at checkout</label>
+        <select class="a-in" id="default_payment_method" name="default_payment_method">
+          <option value="partial_cod" <%= sel('default_payment_method', 'partial_cod') %>>Partial COD (recommended)</option>
+          <option value="prepaid" <%= sel('default_payment_method', 'prepaid') %>>Pay online</option>
+          <option value="cod" <%= sel('default_payment_method', 'cod') %>>Cash on delivery</option>
+        </select></div>
+    </div>
+  </section>
+
+  <section class="space-y-3 border-t border-neutral-100 pt-5">
+    <h3 class="text-sm font-semibold">Partial COD (small advance online, rest on delivery)</h3>
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="partial_cod_enabled" value="1" <%= chk('partial_cod_enabled') %>> Offer partial COD</label>
+    <div class="grid md:grid-cols-3 gap-4">
+      <div><label class="a-lbl" for="partial_cod_type">Advance type</label>
+        <select class="a-in" id="partial_cod_type" name="partial_cod_type">
+          <option value="fixed" <%= sel('partial_cod_type', 'fixed') %>>Fixed amount (₹)</option>
+          <option value="percent" <%= sel('partial_cod_type', 'percent') %>>Percent of order</option>
+        </select></div>
+      <div><label class="a-lbl" for="partial_cod_amount">Fixed advance (₹)</label><input class="a-in" type="number" min="1" id="partial_cod_amount" name="partial_cod_amount" value="<%= s.partial_cod_amount %>"></div>
+      <div><label class="a-lbl" for="partial_cod_percent">Advance (% of order)</label><input class="a-in" type="number" min="5" max="90" id="partial_cod_percent" name="partial_cod_percent" value="<%= s.partial_cod_percent %>"></div>
+    </div>
+  </section>
+
+  <section class="space-y-3 border-t border-neutral-100 pt-5">
+    <h3 class="text-sm font-semibold">Full cash on delivery</h3>
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="cod_enabled" value="1" <%= chk('cod_enabled') %>> Offer full COD</label>
+    <div class="grid md:grid-cols-3 gap-4">
+      <div><label class="a-lbl" for="cod_min_order">Minimum order value for COD (₹, 0 = none)</label><input class="a-in" type="number" min="0" id="cod_min_order" name="cod_min_order" value="<%= s.cod_min_order %>"></div>
+      <div><label class="a-lbl" for="cod_max_order">Maximum order value for COD (₹, 0 = no limit)</label><input class="a-in" type="number" min="0" id="cod_max_order" name="cod_max_order" value="<%= s.cod_max_order %>"></div>
+      <div><label class="a-lbl" for="cod_fee">COD fee (₹, also on partial COD)</label><input class="a-in" type="number" min="0" id="cod_fee" name="cod_fee" value="<%= s.cod_fee %>"></div>
+    </div>
+    <p class="text-xs text-neutral-400">Order value = cart total after coupon. Min/max apply to full COD only.</p>
+  </section>
+
+  <section class="space-y-3 border-t border-neutral-100 pt-5">
+    <h3 class="text-sm font-semibold">Customer risk</h3>
+    <div class="grid md:grid-cols-3 gap-4">
+      <div><label class="a-lbl" for="rto_block_threshold">Turn off full COD after this many past RTOs (0 = off)</label><input class="a-in" type="number" min="0" id="rto_block_threshold" name="rto_block_threshold" value="<%= s.rto_block_threshold %>"></div>
+    </div>
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="risk_allow_partial" value="1" <%= chk('risk_allow_partial') %>> When full COD is blocked (risky pincode, blacklisted phone or past RTO), still allow partial COD</label>
+  </section>
+
+  <section class="space-y-3 border-t border-neutral-100 pt-5">
+    <h3 class="text-sm font-semibold">Address &amp; delivery</h3>
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="address_require_landmark" value="1" <%= chk('address_require_landmark') %>> Landmark is required at checkout</label>
+    <div class="grid md:grid-cols-3 gap-4">
+      <div><label class="a-lbl" for="pincode_mode">Serviceable pincodes</label>
+        <select class="a-in" id="pincode_mode" name="pincode_mode">
+          <option value="all" <%= sel('pincode_mode', 'all') %>>All valid pincodes, except ones marked "not serviceable"</option>
+          <option value="list" <%= sel('pincode_mode', 'list') %>>Only pincodes marked "serviceable" below</option>
+        </select></div>
+      <div><label class="a-lbl" for="delivery_days_text">Delivery time shown on product page</label><input class="a-in" id="delivery_days_text" name="delivery_days_text" value="<%= s.delivery_days_text %>"></div>
+    </div>
+  </section>
+
+  <section class="space-y-3 border-t border-neutral-100 pt-5">
+    <h3 class="text-sm font-semibold">COD order confirmation</h3>
+    <p class="text-xs text-neutral-500">Every cash-on-delivery order starts as "Awaiting confirmation" and cannot be shipped until you confirm it (Orders &gt; Needs confirmation).</p>
+    <div class="grid md:grid-cols-3 gap-4">
+      <div><label class="a-lbl" for="confirm_autocancel_hours">Auto-cancel if not confirmed within (hours, 0 = never)</label><input class="a-in" type="number" min="0" id="confirm_autocancel_hours" name="confirm_autocancel_hours" value="<%= s.confirm_autocancel_hours %>"></div>
+    </div>
+    <div><label class="a-lbl" for="confirm_message">WhatsApp confirmation message</label><textarea class="a-in font-mono" rows="8" id="confirm_message" name="confirm_message"><%= String(s.confirm_message || '').replace(/\\n/g, '\n') %></textarea>
+      <p class="text-xs text-neutral-400 mt-1">Placeholders: {name} {order_id} {items} {total} {due} {address} {store} {hours}</p></div>
+  </section>
+
+  <button class="a-btn px-6 py-3">Save rules</button>
+</form>
+
+<div id="pincodes" class="a-card p-5 space-y-4">
+  <div>
+    <h2 class="a-h">Pincode rules</h2>
+    <p class="text-sm text-neutral-500 mt-1"><%= pinCounts.total || 0 %> pincode(s) listed: <%= pinCounts.cod_blocked || 0 %> COD-blocked, <%= pinCounts.not_serviceable || 0 %> not serviceable, <%= pinCounts.serviceable || 0 %> serviceable.</p>
+  </div>
+  <form method="post" action="/admin/settings/cod/pincodes" class="grid md:grid-cols-[1fr_220px] gap-4">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div><label class="a-lbl" for="pincodes-in">Pincodes (paste many, separated by commas, spaces or new lines)</label><textarea class="a-in" id="pincodes-in" name="pincodes" rows="3" placeholder="110001, 110002&#10;400001"></textarea></div>
+    <div class="space-y-3">
+      <div><label class="a-lbl" for="action">Action</label>
+        <select class="a-in" id="action" name="action">
+          <option value="block_cod">Block COD (prepaid still allowed)</option>
+          <option value="unblock_cod">Allow COD again</option>
+          <option value="not_serviceable">Mark not serviceable</option>
+          <option value="serviceable">Mark serviceable</option>
+          <option value="remove">Remove from list</option>
+        </select></div>
+      <div><label class="a-lbl" for="note">Note (optional)</label><input class="a-in" id="note" name="note" placeholder="e.g. high RTO area"></div>
+      <button class="a-btn w-full justify-center">Apply</button>
+    </div>
+  </form>
+  <form method="get" action="/admin/settings/cod#pincodes" class="flex gap-2 max-w-sm"><input class="a-in" name="pin" value="<%= pinQuery %>" placeholder="Search pincode"><button class="a-btn-o">Search</button></form>
+  <% if (pins.length) { %>
+  <div class="overflow-x-auto"><table class="a-table">
+    <thead><tr><th>Pincode</th><th>Serviceable</th><th>COD</th><th>Note</th><th>Updated</th></tr></thead>
+    <tbody><% pins.forEach((p) => { %><tr>
+      <td class="font-medium"><%= p.pincode %></td>
+      <td><%- p.serviceable ? pill('yes', 'green') : pill('no', 'red') %></td>
+      <td><%- p.cod_blocked ? pill('blocked', 'red') : pill('allowed', 'green') %></td>
+      <td><%= p.note || '' %></td><td><%= d(p.updated_at) %></td>
+    </tr><% }) %></tbody>
+  </table></div>
+  <% } else { %><p class="text-sm text-neutral-500">No pincodes listed<%= pinQuery ? ' for this search' : '' %>.</p><% } %>
+</div>
+
+<div id="phones" class="a-card p-5 space-y-4">
+  <div>
+    <h2 class="a-h">Phone COD blacklist</h2>
+    <p class="text-sm text-neutral-500 mt-1">Blacklisted numbers cannot use full COD<%= s.risk_allow_partial === '1' ? ' (partial COD and prepaid still work)' : ' (prepaid only)' %>. Numbers with past RTOs are restricted automatically by the rule above.</p>
+  </div>
+  <form method="post" action="/admin/settings/cod/phones" class="grid md:grid-cols-[200px_1fr_auto] gap-3 items-end">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div><label class="a-lbl" for="bl-phone">Mobile number</label><input class="a-in" id="bl-phone" name="phone" inputmode="numeric" maxlength="10" required></div>
+    <div><label class="a-lbl" for="bl-note">Reason</label><input class="a-in" id="bl-note" name="note" placeholder="e.g. refused 2 COD orders"></div>
+    <button class="a-btn-r">Blacklist from COD</button>
+  </form>
+  <% if (phones.length) { %>
+  <div class="overflow-x-auto"><table class="a-table">
+    <thead><tr><th>Phone</th><th>Reason</th><th>Orders</th><th>RTOs</th><th>Added</th><th></th></tr></thead>
+    <tbody><% phones.forEach((p) => { %><tr>
+      <td class="font-medium"><%= p.phone %></td><td><%= p.note || '' %></td><td><%= p.orders %></td><td><%= p.rto %></td><td><%= d(p.created_at) %></td>
+      <td><form method="post" action="/admin/settings/cod/phones"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="phone" value="<%= p.phone %>"><button name="remove" value="1" class="text-sm underline text-neutral-600">Remove</button></form></td>
+    </tr><% }) %></tbody>
+  </table></div>
+  <% } else { %><p class="text-sm text-neutral-500">No numbers blacklisted.</p><% } %>
+
+  <h3 class="text-sm font-semibold pt-3">Phones with past RTOs</h3>
+  <% if (rtoPhones.length) { %>
+  <div class="overflow-x-auto"><table class="a-table">
+    <thead><tr><th>Phone</th><th>Name</th><th>Orders</th><th>RTOs</th><th>Full COD</th></tr></thead>
+    <tbody><% rtoPhones.forEach((p) => { const auto = Number(s.rto_block_threshold) > 0 && p.rto >= Number(s.rto_block_threshold); %><tr>
+      <td class="font-medium"><%= p.phone %></td><td><%= p.name || '' %></td><td><%= p.orders %></td><td><%= p.rto %></td>
+      <td><%- auto ? pill('blocked (auto)', 'red') : pill('allowed', 'amber') %></td>
+    </tr><% }) %></tbody>
+  </table></div>
+  <% } else { %><p class="text-sm text-neutral-500">No RTOs recorded yet.</p><% } %>
+</div>
+
+</div>
+<%- include('partials/bottom') %>

@@ -1,6 +1,12 @@
 <%- include('partials/header') %>
 <div class="container-x py-14 max-w-2xl">
   <h1 class="text-4xl font-semibold"><%= title %></h1>
-  <div class="mt-6 space-y-4 text-neutral-700 leading-relaxed"><% paras.forEach((p) => { %><p><%= p %></p><% }) %></div>
+  <div class="mt-6 space-y-4 text-neutral-700 leading-relaxed">
+    <% blocks.forEach((b) => { %>
+      <% if (b.type === 'h') { %><h2 class="text-xl font-semibold text-ink pt-4"><%= b.text %></h2>
+      <% } else if (b.type === 'ul') { %><ul class="list-disc pl-5 space-y-1"><% b.items.forEach((i) => { %><li><%= i %></li><% }) %></ul>
+      <% } else { %><p><%= b.text %></p><% } %>
+    <% }) %>
+  </div>
 </div>
 <%- include('partials/footer') %>

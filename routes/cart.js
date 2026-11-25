@@ -2,6 +2,7 @@ const router = require('express').Router();
 const cartLib = require('../lib/cart');
 const coupons = require('../lib/coupons');
 const events = require('../lib/events');
+const upsell = require('../lib/upsell');
 
 const wantsJson = (req) => req.is('json') || req.accepts(['html', 'json']) === 'json';
 const back = (req, res, fb = '/cart') => res.redirect(req.get('referer') || fb);
@@ -10,9 +11,10 @@ const MSG = { notfound: 'Product not found', soldout: 'Sorry, this size is out o
 router.get('/', async (req, res) => {
   const cart = cartLib.hydrate(req.session.cart);
   let coupon = null;
-  if (req.session.coupon) { coupon = await coupons.validate(req.session.coupon, cart.subtotal); if (!coupon.ok) { req.session.couponMsg = coupon.message; req.session.coupon = null; coupon = null; } }
+  if (req.session.coupon) { coupon = await coupons.validate(req.session.coupon, cart.net); if (!coupon.ok) { req.session.couponMsg = coupon.message; req.session.coupon = null; coupon = null; } }
   const msg = req.session.couponMsg; req.session.couponMsg = null;
-  res.render('cart', { pageTitle: 'Your cart | MythosBySS', noindex: true, cart, coupon, couponMsg: msg, maxQty: cartLib.MAX_QTY });
+  const addons = cart.items.length ? await upsell.forCart(cart) : [];
+  res.render('cart', { pageTitle: 'Your cart | MythosBySS', noindex: true, cart, coupon, couponMsg: msg, maxQty: cartLib.MAX_QTY, addons, defaultVariant: upsell.defaultVariant });
 });
 
 router.post('/add', (req, res) => {
@@ -23,6 +25,16 @@ router.post('/add', (req, res) => {
   if (r === 'ok') events.track(req, 'add_to_cart', { product: slug });
   if (wantsJson(req)) return res.status(r === 'ok' ? 200 : 400).json({ ok: r === 'ok', count: cart.count, subtotal: cart.subtotal, message: r === 'ok' ? 'Added to cart' : MSG[r] });
   return r === 'ok' ? res.redirect('/cart') : back(req, res);
+});
+
+// "Frequently bought together": add several products at once. Each `add` value is "slug:sku".
+router.post('/add-many', (req, res) => {
+  req.session.cart = req.session.cart || [];
+  const picks = [].concat(req.body.add || []).slice(0, 8).map((v) => String(v).split(':'));
+  let added = 0;
+  for (const [slug, sku] of picks) if (cartLib.addLine(req.session.cart, slug, sku, 1) === 'ok') { added++; events.track(req, 'add_to_cart', { product: slug }); }
+  if (wantsJson(req)) return res.status(added ? 200 : 400).json({ ok: added > 0, added, count: cartLib.hydrate(req.session.cart).count });
+  res.redirect('/cart');
 });
 
 router.post('/buy-now', (req, res) => {
@@ -46,7 +58,7 @@ router.post('/remove', (req, res) => { req.session.cart = (req.session.cart || [
 router.post('/coupon', async (req, res) => {
   if (req.body.remove) { req.session.coupon = null; return res.redirect('/cart'); }
   const cart = cartLib.hydrate(req.session.cart);
-  const r = await coupons.validate(req.body.code, cart.subtotal);
+  const r = await coupons.validate(req.body.code, cart.net);
   if (r.ok) req.session.coupon = r.code; req.session.couponMsg = r.message;
   res.redirect('/cart');
 });

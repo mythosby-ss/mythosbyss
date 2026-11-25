@@ -2,6 +2,7 @@
 <div class="container-x py-14 max-w-md">
   <h1 class="text-4xl font-semibold">Log in with WhatsApp</h1>
   <p class="mt-2 text-neutral-600">No password needed. We send a 6-digit code to your WhatsApp number.</p>
+  <% if (devCode) { %><p class="mt-4 text-sm bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3">Development mode: log in with any valid mobile number and the code <strong><%= devCode %></strong>. This is switched off automatically in production.</p><% } %>
   <div id="login-root" data-next="<%= next %>" class="mt-8">
     <form id="step-phone" novalidate class="space-y-4">
       <div><label class="label" for="phone">WhatsApp number</label>
@@ -10,7 +11,7 @@
     </form>
     <form id="step-otp" novalidate class="space-y-4 hidden">
       <p class="text-sm text-neutral-600">Enter the code sent to <strong data-phone-label></strong>. <button type="button" class="underline" data-change>Change number</button></p>
-      <div><label class="label" for="otp">6-digit code</label><input class="field tracking-[0.5em] text-center text-xl" id="otp" name="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></div>
+      <div><label class="label" for="otp">Verification code</label><input class="field tracking-[0.5em] text-center text-xl" id="otp" name="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="<%= devCode ? devCode.length : 6 %>" required></div>
       <div><label class="label" for="name">Your name <span class="text-neutral-500 font-normal">(first time only)</span></label><input class="field" id="name" name="name" autocomplete="name"></div>
       <button class="btn-dark w-full py-4" data-verify>Verify &amp; continue</button>
       <p class="text-sm text-center"><button type="button" class="underline" data-resend>Resend code</button></p>

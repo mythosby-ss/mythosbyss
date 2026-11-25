@@ -1,13 +1,34 @@
 <%- include('partials/header') %>
 <div class="container-x py-14 max-w-md">
   <h1 class="text-4xl font-semibold">Track your order</h1>
+  <% if (!result) { %>
   <p class="mt-2 text-neutral-600">Enter the order ID from your confirmation and the mobile number you used at checkout.</p>
   <% if (error) { %><p role="alert" class="mt-5 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3"><%= error %></p><% } %>
   <form method="post" action="/track" class="mt-6 space-y-4">
     <input type="hidden" name="_csrf" value="<%= csrf %>">
-    <div><label class="label" for="orderId">Order ID</label><input class="field" id="orderId" name="orderId" required placeholder="MB..."></div>
-    <div><label class="label" for="phone">Mobile number</label><input class="field" id="phone" name="phone" inputmode="numeric" maxlength="10" required></div>
+    <div><label class="label" for="orderId">Order ID</label><input class="field uppercase" id="orderId" name="orderId" required placeholder="MB..." value="<%= form.orderId || '' %>" autocomplete="off"></div>
+    <div><label class="label" for="phone">Mobile number</label><input class="field" id="phone" name="phone" inputmode="numeric" maxlength="10" required value="<%= form.phone || '' %>" autocomplete="tel-national"></div>
     <button class="btn-dark w-full py-4">Find my order</button>
   </form>
+  <% if (customer) { %><p class="mt-6 text-sm text-center">Logged in? See all your orders in <a class="underline" href="/account">My account</a>.</p><% } %>
+  <% } else { const steps = ['confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered']; const idx = steps.indexOf(result.status === 'ndr' ? 'out_for_delivery' : result.status); %>
+  <div class="mt-6 bg-paper rounded-2xl p-5" aria-live="polite">
+    <p class="text-sm text-neutral-500">Order <b class="text-ink"><%= result.id %></b> &middot; placed <%= new Date(result.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' }) %></p>
+    <p class="mt-2 text-2xl font-semibold"><%= statusLabel[result.status] %></p>
+    <% if (result.status === 'pending_confirmation') { %><p class="mt-2 text-sm">We will confirm your order with you on WhatsApp shortly. Please reply so we can ship it.</p><% } %>
+    <% if (result.status === 'awaiting_payment') { %><p class="mt-2 text-sm text-amber-700">Payment has not been received for this order.</p><% } %>
+    <% if (result.status === 'ndr') { %><p class="mt-2 text-sm text-amber-800">The courier could not deliver your order. We will contact you on WhatsApp to arrange re-delivery.</p><% } %>
+    <% if (['cancelled', 'rto'].includes(result.status) && result.cancelReason) { %><p class="mt-2 text-sm text-red-600"><%= result.cancelReason %></p><% } %>
+    <% if (idx >= 0) { %>
+    <ol class="mt-5 grid grid-cols-5 gap-1 text-center text-[11px]" aria-label="Order progress">
+      <% steps.forEach((s, i) => { %><li class="<%= i <= idx ? 'text-ink font-semibold' : 'text-neutral-400' %>"><span class="block mx-auto w-3 h-3 rounded-full mb-1.5 <%= i <= idx ? 'bg-gold' : 'bg-neutral-300' %>"></span><%= statusLabel[s] %></li><% }) %>
+    </ol>
+    <% } %>
+    <% if (result.awb) { %><p class="mt-5 text-sm">Courier: <b><%= result.courier %></b> &middot; AWB / tracking no. <b><%= result.awb %></b></p><% } %>
+    <ul class="mt-4 text-sm border-t border-neutral-200 pt-3 space-y-1"><% result.items.forEach((i) => { %><li><%= i.product_name %> <span class="text-neutral-500">(<%= i.variant_label %>) &times; <%= i.qty %></span></li><% }) %></ul>
+    <p class="mt-3 text-sm"><%= result.paymentMethod %><% if (result.due > 0 && !['cancelled', 'rto'].includes(result.status)) { %> &middot; <b>Pay <%= money(result.due) %> on delivery</b><% } %></p>
+  </div>
+  <a href="/track" class="btn-outline w-full mt-6 py-3">Track another order</a>
+  <% } %>
 </div>
 <%- include('partials/footer') %>

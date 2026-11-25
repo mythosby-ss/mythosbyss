@@ -1,0 +1,23 @@
+<%- include('partials/top') %>
+<div class="space-y-6 max-w-4xl">
+  <section class="a-card p-5 space-y-2">
+    <h2 class="a-h">Shipping provider</h2>
+    <p class="text-sm">In use: <%- pill(provider.label, provider.name === 'manual' ? 'blue' : 'green') %> <span class="text-xs text-neutral-500">(set <code>SHIPPING_PROVIDER</code> in .env)</span></p>
+    <ul class="text-sm text-neutral-600 list-disc pl-5">
+      <% providers.forEach((p) => { %><li><b><%= p.name %></b>: <%= p.label %></li><% }) %>
+    </ul>
+    <p class="text-xs text-neutral-500">Manual: book the courier yourself, then enter courier + AWB when marking an order shipped, and update each status by hand (including "Delivery attempted (NDR)"). Shiprocket / Shipway can be connected later (needs an account and API keys) without changing the admin screens.</p>
+    <p class="text-sm pt-2">Courier status webhook: <%- webhook.ready ? pill('ready', 'green') : pill('off - set SHIPPING_WEBHOOK_SECRET', 'gray') %> <code class="text-xs"><%= webhook.url %></code></p>
+    <p class="text-xs text-neutral-500">POST JSON <code>{"order_id","status","awb","note"}</code> with header <code>x-webhook-secret</code>. Status: shipped, in_transit, out_for_delivery, ndr / undelivered / delivery_attempted, delivered, rto.</p>
+  </section>
+
+  <form method="post" action="/admin/settings/shipping" class="a-card p-5 space-y-4">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <h2 class="a-h">Couriers &amp; failed deliveries</h2>
+    <div><label class="a-lbl" for="courier_names">Courier names (suggested when you mark an order shipped, comma separated)</label><input class="a-in" id="courier_names" name="courier_names" value="<%= s.courier_names %>"></div>
+    <div><label class="a-lbl" for="ndr_message">WhatsApp message for failed deliveries (NDR)</label><textarea class="a-in font-mono" rows="6" id="ndr_message" name="ndr_message"><%= s.ndr_message %></textarea>
+      <p class="text-xs text-neutral-400 mt-1">Placeholders: {name} {order_id} {courier} {awb} {store} {due} {address}</p></div>
+    <button class="a-btn px-6 py-3">Save</button>
+  </form>
+</div>
+<%- include('partials/bottom') %>

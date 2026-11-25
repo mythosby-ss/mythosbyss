@@ -11,6 +11,8 @@
     <div class="md:col-span-2"><label class="a-lbl" for="features">Key features (one per line)</label><textarea class="a-in" id="features" name="features" rows="3"><%= p ? p.features.join('\n') : '' %></textarea></div>
     <div><label class="a-lbl" for="badge">Badge (optional)</label><input class="a-in" id="badge" name="badge" value="<%= p && p.badge ? p.badge : '' %>" placeholder="e.g. Premium range"></div>
     <label class="flex items-center gap-2 pt-6 text-sm"><input type="checkbox" name="is_new" value="1" <%= p && p.isNew ? 'checked' : '' %>> Show in New arrivals</label>
+    <div><label class="a-lbl" for="packaging_cost">Packaging cost per order (₹, for profit)</label><input class="a-in" id="packaging_cost" type="number" min="0" step="0.01" name="packaging_cost" value="<%= p && p.packagingCost != null ? p.packagingCost : '' %>" placeholder="Default from Profit &amp; RTO settings"></div>
+    <div><label class="a-lbl" for="shipping_cost">Forward shipping cost (₹, for profit)</label><input class="a-in" id="shipping_cost" type="number" min="0" step="0.01" name="shipping_cost" value="<%= p && p.shippingCost != null ? p.shippingCost : '' %>" placeholder="Default from Profit &amp; RTO settings"></div>
   </section>
 
   <section class="a-card p-5">

@@ -10,10 +10,20 @@ const settings = require('../lib/settings');
 const catalog = require('../lib/catalog');
 const orders = require('../lib/orders');
 const notify = require('../lib/notify');
+const stock = require('../lib/stock');
+const capi = require('../lib/capi');
+
+// Browser context for the Conversions API, captured now because Purchase may be sent later (on payment or confirmation)
+function adContext(req) {
+  const cookies = Object.fromEntries(String(req.get('cookie') || '').split(';').map((c) => c.trim().split('=')).filter((x) => x[0]).map(([k, ...v]) => [k, decodeURIComponent(v.join('='))]));
+  return { fbp: cookies._fbp || null, fbc: cookies._fbc || req.session.fbc || null, ip: req.ip || null, ua: String(req.get('user-agent') || '').slice(0, 400) || null };
+}
+const validate = require('../lib/validate');
+const codrules = require('../lib/codrules');
 
 const METHODS = { prepaid: 'Pay online (UPI / Card / NetBanking)', cod: 'Cash on delivery', partial_cod: 'Partial COD (pay a part now, rest on delivery)' };
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 40, standardHeaders: true, legacyHeaders: false });
-const STATES = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Delhi','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Andaman and Nicobar Islands','Chandigarh','Dadra and Nagar Haveli and Daman and Diu','Jammu and Kashmir','Ladakh','Lakshadweep','Puducherry'];
+const STATES = validate.STATES;
 
 const isBuyNow = (req) => req.query.mode === 'buynow' || (req.body && req.body.mode === 'buynow');
 const activeLines = (req) => (isBuyNow(req) ? req.session.buyNow : req.session.cart) || [];
@@ -28,72 +38,77 @@ async function couponFor(req, subtotal) {
   return r.ok ? { discount: r.discount, code: r.code } : { discount: 0, code: null };
 }
 
-function validate(b) {
-  const e = {}; const s = (v) => String(v || '').trim();
-  if (s(b.name).length < 2) e.name = 'Enter your full name.';
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s(b.email))) e.email = 'Enter a valid email address.';
-  if (s(b.line1).length < 5) e.line1 = 'Enter your house number and street.';
-  if (s(b.city).length < 2) e.city = 'Enter your city.';
-  if (s(b.state).length < 2) e.state = 'Select your state.';
-  if (!/^[1-9]\d{5}$/.test(s(b.pincode))) e.pincode = 'Enter a valid 6-digit pincode.';
-  return e;
-}
-
 router.get('/checkout', needLogin, async (req, res) => {
   const buyNow = isBuyNow(req);
   const cart = cartLib.hydrate(activeLines(req));
   if (!cart.items.length) return res.redirect('/cart');
-  const { discount, code } = await couponFor(req, cart.subtotal);
+  const { discount, code } = await couponFor(req, cart.net);
   const pricing = Object.fromEntries(Object.keys(METHODS).map((m) => [m, cartLib.priceOrder(cart, m, discount)]));
   const full = await db.one('SELECT * FROM customers WHERE id=?', [res.locals.customer.id]);
   let saved = {}; try { saved = JSON.parse(full.last_address || '{}'); } catch (_) {}
+  if (!saved.landmark && saved.line2) saved.landmark = saved.line2; // addresses saved before the separate landmark field
+  const options = await codrules.paymentOptions({ orderValue: cart.net - discount, pincode: saved.pincode, phone: full.phone });
   events.track(req, 'begin_checkout');
   res.render('checkout', {
     pageTitle: 'Checkout | MythosBySS', noindex: true, cart, pricing, methods: METHODS, buyNow, couponCode: code, discount,
-    partialPercent: settings.num('partial_cod_percent'), codFee: settings.num('cod_fee'), onlineEnabled: rzp.enabled(), states: STATES, saved, profile: full
+    options: options.methods, selected: codrules.defaultMethod(options.methods), pincodeMessage: options.pincodeMessage,
+    prepaidDiscount: cartLib.prepaidDiscount(), requireLandmark: settings.on('address_require_landmark'),
+    codFee: settings.num('cod_fee'), onlineEnabled: rzp.enabled(), states: STATES, saved, profile: full
   });
 });
 
 router.post('/checkout/place', needLogin, limiter, async (req, res, next) => {
-  const reserved = [];
   try {
     const b = req.body; const method = b.paymentMethod; const cust = res.locals.customer;
     if (!METHODS[method]) return res.status(422).json({ ok: false, message: 'Choose a payment method.' });
-    const errors = validate(b);
+    const errors = validate.address(b);
     if (Object.keys(errors).length) return res.status(422).json({ ok: false, errors, message: 'Please fix the highlighted fields.' });
     const cart = cartLib.hydrate(activeLines(req));
     if (!cart.items.length) return res.status(400).json({ ok: false, message: 'Your cart is empty.' });
     if (cart.hasSoldOut) return res.status(409).json({ ok: false, message: 'Some items just went out of stock. Please review your cart.' });
 
-    const { discount, code } = await couponFor(req, cart.subtotal);
+    const { discount, code } = await couponFor(req, cart.net);
+    // COD / RTO rules (pincode, order value, phone RTO history, blacklist) are always enforced here, not only in the browser
+    const options = await codrules.paymentOptions({ orderValue: cart.net - discount, pincode: b.pincode, phone: cust.phone });
+    if (!options.serviceable) return res.status(422).json({ ok: false, errors: { pincode: options.pincodeMessage }, message: options.pincodeMessage });
+    if (!options.methods[method].ok) return res.status(422).json({ ok: false, message: options.methods[method].reason + ' Please choose another payment method.', options: options.methods });
     const amounts = cartLib.priceOrder(cart, method, discount);
-    if (amounts.payNow > 0 && !rzp.enabled()) return res.status(503).json({ ok: false, message: 'Online payment is not available right now. Please choose Cash on delivery.' });
+    if (amounts.payNow > 0 && !rzp.enabled()) return res.status(503).json({ ok: false, message: 'Online payment is not available right now. Please try again later.' });
 
-    for (const i of cart.items) { // reserve stock atomically per line
-      const r = await db.run('UPDATE variants SET stock = stock - ? WHERE sku=? AND stock >= ?', [i.qty, i.sku, i.qty]);
-      if (!r.changes) { for (const x of reserved) await db.run('UPDATE variants SET stock = stock + ? WHERE sku=?', [x.qty, x.sku]); await catalog.refresh(); return res.status(409).json({ ok: false, message: `${i.product.name} (${i.variant.label}) is no longer available in that quantity.` }); }
-      reserved.push(i);
+    // Reserve stock (bundles reserve their component SKUs). All-or-nothing.
+    const lines = cart.items.map((i) => ({ sku: i.sku, qty: i.qty, components: i.variant.components }));
+    const r = await stock.reserve(stock.needs(lines));
+    if (!r.ok) {
+      await catalog.refresh();
+      const i = cart.items.find((x) => x.sku === r.sku || (x.variant.components || []).some((c) => c.sku === r.sku)) || cart.items[0];
+      return res.status(409).json({ ok: false, message: `${i.product.name} (${i.variant.label}) is no longer available in that quantity.` });
     }
 
     const t = (v) => String(v || '').trim(); const now = db.nowIso(); const id = orders.newId(); const attr = req.session.attr || {};
     const online = amounts.payNow > 0;
-    await db.run(`INSERT INTO orders(id,customer_id,status,payment_method,payment_status,subtotal,discount,coupon_code,shipping_fee,cod_fee,total,pay_now,due_on_delivery,
+    const ctx = adContext(req);
+    // COD orders wait for a confirmation call/WhatsApp from the admin; prepaid & partial COD are confirmed once paid.
+    const offlineStatus = method === 'cod' ? 'pending_confirmation' : 'confirmed';
+    await db.run(`INSERT INTO orders(id,customer_id,status,payment_method,payment_status,subtotal,discount,prepaid_discount,offer_discount,fbp,fbc,client_ip,user_agent,coupon_code,shipping_fee,cod_fee,total,pay_now,due_on_delivery,
       name,email,phone,address,city,state,pincode,note,utm_source,utm_medium,utm_campaign,review_token,created_at,confirmed_at,updated_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [id, cust.id, online ? 'awaiting_payment' : 'confirmed', method, online ? 'pending' : 'cod_pending', amounts.subtotal, amounts.discount, code, amounts.shipping, amounts.codFee, amounts.total, amounts.payNow, amounts.dueOnDelivery,
-        t(b.name), t(b.email).toLowerCase(), cust.phone, [t(b.line1), t(b.line2)].filter(Boolean).join(', '), t(b.city), t(b.state), t(b.pincode), t(b.note).slice(0, 300),
-        attr.source || 'direct', attr.medium || '', attr.campaign || '', crypto.randomBytes(12).toString('hex'), now, online ? null : now, now]);
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [id, cust.id, online ? 'awaiting_payment' : offlineStatus, method, online ? 'pending' : 'cod_pending', amounts.subtotal, amounts.discount + amounts.prepaidDiscount + amounts.offerDiscount, amounts.prepaidDiscount, amounts.offerDiscount, ctx.fbp, ctx.fbc, ctx.ip, ctx.ua, code, amounts.shipping, amounts.codFee, amounts.total, amounts.payNow, amounts.dueOnDelivery,
+        t(b.name), t(b.email).toLowerCase(), cust.phone, fullAddress(b), t(b.city), t(b.state), t(b.pincode), t(b.note).slice(0, 300),
+        attr.source || 'direct', attr.medium || '', attr.campaign || '', crypto.randomBytes(12).toString('hex'), now, !online && offlineStatus === 'confirmed' ? now : null, now]);
     await db.batch([
-      ...cart.items.map((i) => ['INSERT INTO order_items(order_id,product_slug,product_name,sku,variant_label,qty,unit_price,cost_price) VALUES(?,?,?,?,?,?,?,?)', [id, i.slug, i.product.name, i.sku, i.variant.label, i.qty, i.unit, i.variant.cost]]),
-      ['INSERT INTO order_events(order_id,status,note,actor,at) VALUES(?,?,?,?,?)', [id, online ? 'awaiting_payment' : 'confirmed', online ? 'Waiting for online payment' : 'Order placed', 'customer', now]],
-      ['UPDATE customers SET name=?, email=?, last_address=? WHERE id=?', [t(b.name), t(b.email).toLowerCase(), JSON.stringify({ line1: t(b.line1), line2: t(b.line2), city: t(b.city), state: t(b.state), pincode: t(b.pincode) }), cust.id]]
+      ...cart.items.map((i) => ['INSERT INTO order_items(order_id,product_slug,product_name,sku,variant_label,qty,unit_price,cost_price,components) VALUES(?,?,?,?,?,?,?,?,?)',
+        [id, i.slug, i.product.name, i.sku, i.variant.label, i.qty, i.unit, i.variant.cost, i.variant.components ? JSON.stringify(i.variant.components.map((c) => ({ sku: c.sku, qty: c.qty, name: c.name, label: c.label }))) : null]]),
+      ['INSERT INTO order_events(order_id,status,note,actor,at) VALUES(?,?,?,?,?)', [id, online ? 'awaiting_payment' : offlineStatus, online ? 'Waiting for online payment' : offlineStatus === 'pending_confirmation' ? 'Order placed (cash on delivery) - waiting for confirmation' : 'Order placed', 'customer', now]],
+      ['UPDATE customers SET name=?, email=?, last_address=? WHERE id=?', [t(b.name), t(b.email).toLowerCase(), JSON.stringify({ house: t(b.house), line1: t(b.line1), landmark: t(b.landmark), city: t(b.city), state: t(b.state), pincode: t(b.pincode) }), cust.id]]
     ].concat(code ? [['UPDATE coupons SET used = used + 1 WHERE code=?', [code]]] : []));
     await catalog.refresh();
     req.session.orders = [...(req.session.orders || []), id];
 
     if (!online) {
-      clearActive(req); events.track(req, 'purchase');
-      notify.onConfirmed(id).catch((e) => console.error(e.message));
+      clearActive(req); events.track(req, 'purchase'); // first-party funnel step "order placed" (not sent to Meta)
+      // COD: confirmation message + conversion events are sent when the admin confirms the order (lib/notify onStatus)
+      if (offlineStatus === 'confirmed') notify.onConfirmed(id).catch((e) => console.error(e.message));
+      else if (capi.metaReady()) orders.getOrder(id).then((o) => capi.codPlaced(o)).catch((e) => console.error('[capi] COD_Placed', e.message)); // not a Purchase
       return res.json({ ok: true, redirect: `/order/${id}` });
     }
     try {
@@ -123,6 +138,18 @@ router.post('/checkout/verify', needLogin, limiter, async (req, res, next) => {
     res.json({ ok: true, redirect: `/order/${o.id}` });
   } catch (e) { next(e); }
 });
+
+// Re-check payment options when the customer types a pincode at checkout (rules are enforced again on /checkout/place)
+router.get('/checkout/options', needLogin, async (req, res, next) => {
+  try {
+    const cart = cartLib.hydrate(activeLines(req));
+    const { discount } = await couponFor(req, cart.net);
+    const o = await codrules.paymentOptions({ orderValue: cart.net - discount, pincode: String(req.query.pincode || ''), phone: res.locals.customer.phone });
+    res.json({ ok: true, serviceable: o.serviceable, pincodeMessage: o.pincodeMessage, methods: o.methods, selected: codrules.defaultMethod(o.methods) });
+  } catch (e) { next(e); }
+});
+
+const fullAddress = (b) => { const t = (v) => String(v || '').trim(); return [t(b.house), t(b.line1), t(b.landmark) && 'Landmark: ' + t(b.landmark)].filter(Boolean).join(', '); };
 
 function clearActive(req) { if (req.body.mode === 'buynow') req.session.buyNow = null; else { req.session.cart = []; req.session.coupon = null; } }
 

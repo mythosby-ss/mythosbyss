@@ -16,15 +16,15 @@ const I = {
 };
 module.exports = [
   { label: 'Home', href: '/admin', icon: I.home },
-  { label: 'Analytics', icon: I.chart, children: [['Dashboard', '/admin/analytics'], ['Monthly Report', '/admin/monthly-report'], ['Reports', '/admin/reports']] },
+  { label: 'Analytics', icon: I.chart, children: [['Profit & RTO', '/admin/profit'], ['Dashboard', '/admin/analytics'], ['Monthly Report', '/admin/monthly-report'], ['Reports', '/admin/reports']] },
   { label: 'Orders', icon: I.box, children: [['Process orders', '/admin/orders'], ['All orders', '/admin/orders?tab=all']] },
   { label: 'Finance', icon: I.wallet, children: [['Remittance', '/admin/finance'], ['Order finance', '/admin/finance/orders'], ['Refunds', '/admin/finance/refunds']] },
   { label: 'Products', icon: I.grid, children: [['Catalogue', '/admin/catalogue'], ['Create product', '/admin/catalogue/new'], ['Drive images', '/admin/catalogue/drive'], ['Inventory', '/admin/inventory']] },
   { label: 'Customers', icon: I.users, children: [['Purchasing customers', '/admin/customers']] },
-  { label: 'Offers and Coupons', icon: I.tag, children: [['Coupons', '/admin/coupons']] },
+  { label: 'Offers and Coupons', icon: I.tag, children: [['Coupons', '/admin/coupons'], ['Bundles, add-ons & offers', '/admin/offers']] },
   { label: 'Marketing', icon: I.megaphone, children: [['Performance marketing', '/admin/marketing/performance'], ['Digital marketing', '/admin/marketing/digital'], ['SEO optimization', '/admin/marketing/seo']] },
-  { label: 'Website', icon: I.globe, children: [['UGC testimonials', '/admin/website/testimonials'], ['Customer reviews', '/admin/website/reviews']] },
+  { label: 'Website', icon: I.globe, children: [['UGC testimonials', '/admin/website/testimonials'], ['Customer reviews', '/admin/website/reviews'], ['Policy pages & support', '/admin/website/pages']] },
   { label: 'Communication', href: '/admin/communication', icon: I.chat },
   { label: 'Plugins', href: '/admin/plugins', icon: I.plug },
-  { label: 'Settings', icon: I.gear, children: [['Store & charges', '/admin/settings'], ['Billing & invoice', '/admin/settings/billing'], ['Marketing & tracking', '/admin/settings/marketing'], ['Shipping label', '/admin/settings/label']] }
+  { label: 'Settings', icon: I.gear, children: [['Store & charges', '/admin/settings'], ['COD & RTO rules', '/admin/settings/cod'], ['Shipping & NDR', '/admin/settings/shipping'], ['Billing & invoice', '/admin/settings/billing'], ['Marketing & tracking', '/admin/settings/marketing'], ['Shipping label', '/admin/settings/label']] }
 ];

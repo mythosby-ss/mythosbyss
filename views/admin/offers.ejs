@@ -1,0 +1,81 @@
+<%- include('partials/top') %>
+<% const vOpt = (sel, filter) => variants.filter(filter || (() => true)).map((v) => `<option value="${esc(v.sku)}" ${v.sku === sel ? 'selected' : ''}>${esc(v.name)} (${esc(v.label)}) - ${esc(v.sku)} - ₹${v.price}</option>`).join(''); %>
+<div class="space-y-6 max-w-5xl">
+
+<form method="post" action="/admin/offers/settings" class="a-card p-5 space-y-5">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <div><h2 class="a-h">Order value offers</h2><p class="text-sm text-neutral-500 mt-1">Ways to make each order bigger, so shipping and ad cost are spread over more rupees.</p></div>
+  <section class="grid md:grid-cols-3 gap-4">
+    <div><label class="a-lbl" for="shipping_fee">Shipping fee below the threshold (₹)</label><input class="a-in" type="number" min="0" id="shipping_fee" name="shipping_fee" value="<%= s.shipping_fee %>"></div>
+    <div><label class="a-lbl" for="free_shipping_threshold">Free delivery from (₹ cart value, 0 = off)</label><input class="a-in" type="number" min="0" id="free_shipping_threshold" name="free_shipping_threshold" value="<%= s.free_shipping_threshold %>"></div>
+    <p class="text-xs text-neutral-500 md:self-end">The cart shows "Add ₹X more for FREE delivery" only when the shipping fee is above ₹0.<%= Number(s.shipping_fee) ? '' : ' Shipping is currently free for everyone, so the bar is hidden.' %></p>
+  </section>
+  <section class="grid md:grid-cols-3 gap-4 border-t border-neutral-100 pt-5">
+    <div class="md:col-span-2"><label class="a-lbl" for="qty_offer_tiers">Quantity offers (same product, any size): "quantity:₹ off"</label><input class="a-in" id="qty_offer_tiers" name="qty_offer_tiers" value="<%= s.qty_offer_tiers %>" placeholder="2:30, 3:75">
+      <p class="text-xs text-neutral-500 mt-1"><%= tiers.length ? 'Live: ' + tiers.map((t) => 'buy ' + t.qty + ' save ₹' + t.off).join(', ') : 'Off. Example: "2:30, 3:75" = buy 2 save ₹30, buy 3 save ₹75 (per product).' %></p></div>
+    <label class="flex items-center gap-2 text-sm md:self-center"><input type="checkbox" name="qty_offer_on_bundles" value="1" <%= s.qty_offer_on_bundles === '1' ? 'checked' : '' %>> Also on bundles</label>
+  </section>
+  <section class="grid md:grid-cols-3 gap-4 border-t border-neutral-100 pt-5">
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="upsell_enabled" value="1" <%= s.upsell_enabled === '1' ? 'checked' : '' %>> Show "Frequently bought together" and cart add-ons</label>
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="upsell_auto" value="1" <%= s.upsell_auto === '1' ? 'checked' : '' %>> Pick add-ons automatically when none are set</label>
+    <div><label class="a-lbl" for="upsell_max">How many add-ons to show</label><input class="a-in" type="number" min="1" max="6" id="upsell_max" name="upsell_max" value="<%= s.upsell_max %>"></div>
+  </section>
+  <button class="a-btn px-6 py-3">Save offers</button>
+</form>
+
+<div id="bundles" class="a-card p-5 space-y-4">
+  <div><h2 class="a-h">Bundles / combos</h2>
+    <p class="text-sm text-neutral-500 mt-1">1) Create the combo as a normal product (Products &gt; Create product) with its own name, photos, price and MRP. 2) Pick it below and add the items inside it. The combo's stock is then worked out from the items' stock, and ordering it takes stock from each item (cancel / RTO puts it back). The stock number typed on the combo itself is ignored.</p></div>
+  <% if (bundles.length) { %>
+  <div class="overflow-x-auto"><table class="a-table">
+    <thead><tr><th>Bundle</th><th>Contains</th><th>Price</th><th>Items bought separately</th><th>Stock (sets)</th><th></th></tr></thead>
+    <tbody><% bundles.forEach(({ product, v }) => { %><tr>
+      <td><b><%= product.name %></b><br><span class="text-xs text-neutral-500"><%= v.label %> &middot; <%= v.sku %></span></td>
+      <td class="text-xs"><%= v.components.map((c) => c.name + (c.label ? ' (' + c.label + ')' : '') + ' ×' + c.qty).join(', ') %></td>
+      <td><%= money(v.price) %></td><td><%= money(v.componentsValue) %></td>
+      <td><%- v.stock > 0 ? pill(String(v.stock), 'green') : pill('0', 'red') %></td>
+      <td class="whitespace-nowrap"><a class="a-btn-o" href="/admin/offers?bundle=<%= encodeURIComponent(v.sku) %>#bundles">Edit</a></td>
+    </tr><% }) %></tbody>
+  </table></div>
+  <% } else { %><p class="text-sm text-neutral-500">No bundles yet.</p><% } %>
+
+  <form method="post" action="/admin/offers/bundles" class="border-t border-neutral-100 pt-4 space-y-3">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <h3 class="text-sm font-semibold"><%= edit ? 'Edit bundle ' + edit.sku : 'New bundle' %></h3>
+    <div><label class="a-lbl" for="bundle_sku">Bundle product</label><select class="a-in" id="bundle_sku" name="bundle_sku" required><option value="">Choose the combo product...</option><%- vOpt(edit && edit.sku) %></select></div>
+    <% const rows = (edit && edit.components) ? edit.components.concat(Array(Math.max(1, 5 - edit.components.length)).fill({})) : Array(5).fill({}); %>
+    <% rows.forEach((c, i) => { %>
+    <div class="grid grid-cols-[1fr_90px] gap-3">
+      <div><% if (!i) { %><label class="a-lbl">Item inside the bundle</label><% } %><select class="a-in" name="component_sku"><option value="">-</option><%- vOpt(c.sku, (v) => !v.isBundle) %></select></div>
+      <div><% if (!i) { %><label class="a-lbl">Qty</label><% } %><input class="a-in" type="number" min="1" max="20" name="component_qty" value="<%= c.qty || 1 %>"></div>
+    </div>
+    <% }) %>
+    <div class="flex gap-2"><button class="a-btn">Save bundle</button><% if (edit) { %><button class="a-btn-r" name="remove" value="1" data-confirm="Make this a normal product again?">Remove bundle setup</button><a class="a-btn-o" href="/admin/offers#bundles">Cancel</a><% } %></div>
+  </form>
+</div>
+
+<div id="addons" class="a-card p-5 space-y-4">
+  <div><h2 class="a-h">Frequently bought together</h2>
+    <p class="text-sm text-neutral-500 mt-1">Choose add-ons for a product (e.g. chopper &rarr; peeler, grater). Products without a choice here get automatic suggestions<%= s.upsell_auto === '1' ? '' : ' (currently off)' %>: items often bought together, then low-price items.</p></div>
+  <% if (Object.keys(addons).length) { %>
+  <div class="overflow-x-auto"><table class="a-table">
+    <thead><tr><th>Product</th><th>Add-ons</th><th></th></tr></thead>
+    <tbody><% Object.entries(addons).forEach(([slug, list]) => { %><tr>
+      <td><%= (bySlug[slug] || {}).name || slug %></td><td class="text-xs"><%= list.map((x) => (bySlug[x] || {}).name || x).join(', ') %></td>
+      <td><a class="a-btn-o" href="/admin/offers?addon=<%= encodeURIComponent(slug) %>#addons">Edit</a></td>
+    </tr><% }) %></tbody>
+  </table></div>
+  <% } %>
+  <form method="post" action="/admin/offers/addons" class="border-t border-neutral-100 pt-4 space-y-3">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <% const pOpt = (sel) => products.map((p) => `<option value="${esc(p.slug)}" ${p.slug === sel ? 'selected' : ''}>${esc(p.name)} - ₹${p.price}</option>`).join(''); const cur = addons[editAddon] || []; %>
+    <div><label class="a-lbl" for="product_slug">Product</label><select class="a-in" id="product_slug" name="product_slug" required><option value="">Choose...</option><%- pOpt(editAddon) %></select></div>
+    <div class="grid md:grid-cols-3 gap-3">
+      <% [0, 1, 2].forEach((i) => { %><div><label class="a-lbl">Add-on <%= i + 1 %></label><select class="a-in" name="addon_slug"><option value="">-</option><%- pOpt(cur[i]) %></select></div><% }) %>
+    </div>
+    <button class="a-btn">Save add-ons</button> <span class="text-xs text-neutral-500">Leave all empty to clear.</span>
+  </form>
+</div>
+
+</div>
+<%- include('partials/bottom') %>

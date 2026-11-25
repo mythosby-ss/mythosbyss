@@ -64,7 +64,7 @@
   </div><% } %>
   <% if (!on('label_hide_items')) { %>
   <div class="bt pad"><div class="cap">Contents</div>
-    <% o.items.forEach((i) => { %><div style="margin-top:3px"><b><%= i.qty %> ×</b> <%= i.product_name %><%= i.variant_label ? ' (' + i.variant_label + ')' : '' %>
+    <% o.items.forEach((i) => { %><div style="margin-top:3px"><b><%= i.qty %> ×</b> <%= i.product_name %><%= i.variant_label ? ' (' + i.variant_label + ')' : '' %><% if (i.components) { %> <span style="font-size:0.9em">[contains: <%= JSON.parse(i.components).map((c) => c.name + ' ×' + c.qty).join(', ') %>]</span><% } %>
       <div class="muted" style="font-size:10px">SKU: <%= i.sku || '-' %><% if (on('label_product_code') && i.code) { %> &middot; Code: <%= i.code %><% } %></div></div><% }) %>
   </div><% } else if (on('label_product_code')) { %>
   <div class="bt pad"><div class="cap">Product codes</div><%= o.items.map((i) => (i.code || i.sku) + ' × ' + i.qty).join(', ') %></div><% } %>
@@ -113,5 +113,5 @@
     <div class="r"><div>For <b><%= s.biz_name || s.store_name %></b></div><div style="margin-top:30px" class="muted">Authorised signatory</div></div></div>
 </div>
 <% } %>
-<script src="/js/print.js" defer></script>
+<script src="/js/print.js?v=<%= assetV %>" defer></script>
 </body></html>
