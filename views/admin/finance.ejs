@@ -1,5 +1,5 @@
 <%- include('partials/top') %>
-<div class="grid md:grid-cols-3 gap-4">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
   <section class="a-card p-5"><h2 class="a-h">Outstanding COD</h2><p class="text-xs text-neutral-500 mb-3">Delivered, cash not yet settled to you</p>
     <p class="text-sm">Delivered orders <b class="float-right"><%= unsettled.n || 0 %></b></p><p class="text-sm mt-1">COD collected by courier <b class="float-right text-green-700"><%= money(unsettled.amt) %></b></p><p class="text-sm mt-1">Courier expenses <b class="float-right text-red-600">-<%= money(unsettled.exp) %></b></p>
     <p class="border-t mt-3 pt-3 text-sm">Transferable <b class="float-right text-lg"><%= money((unsettled.amt || 0) - (unsettled.exp || 0)) %></b></p>

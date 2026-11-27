@@ -25,6 +25,8 @@
               <option value="">Select state</option>
               <% states.forEach((s) => { %><option value="<%= s %>" <%= saved.state === s ? 'selected' : '' %>><%= s %></option><% }) %>
             </select><p class="err text-xs text-red-600 mt-1" data-err="state"></p></div>
+          <div class="sm:col-span-2"><label class="label" for="preferred_language">Preferred language for order updates <span class="text-neutral-500 font-normal">(optional)</span></label>
+            <select class="field" id="preferred_language" name="preferred_language"><option value="">No preference</option><% languages.forEach((l) => { %><option <%= saved.lang === l ? 'selected' : '' %>><%= l %></option><% }) %></select></div>
           <div class="sm:col-span-2"><label class="label" for="note">Order note <span class="text-neutral-500 font-normal">(optional)</span></label><textarea class="field" id="note" name="note" rows="2" maxlength="300"></textarea></div>
         </div>
       </section>
@@ -35,6 +37,11 @@
           const card = 'flex gap-4 items-start border border-neutral-300 rounded-xl p-4 cursor-pointer has-[:checked]:border-ink has-[:checked]:bg-paper has-[:disabled]:opacity-60 has-[:disabled]:cursor-not-allowed';
           const opt = (k) => options[k] || { ok: false, reason: '' };
         %>
+        <%# Why cash on delivery is not available + how much paying online saves (updated by /js/checkout.js when the pincode changes) %>
+        <div data-pay-note role="status" class="<%= payNote ? '' : 'hidden' %> mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p data-pay-note-reason class="font-medium"><%= payNote ? payNote.reason : '' %></p>
+          <p data-pay-note-save class="mt-1 font-semibold text-green-800 <%= payNote && payNote.save ? '' : 'hidden' %>">Pay online &amp; save <span data-pay-note-amt><%= payNote ? money(payNote.save) : '' %></span>.</p>
+        </div>
         <div class="mt-5 space-y-3">
           <label class="<%= card %>" data-method="prepaid">
             <input type="radio" name="paymentMethod" value="prepaid" class="mt-1 accent-[#b07a2a]" <%= opt('prepaid').ok ? '' : 'disabled' %> <%= selected === 'prepaid' ? 'checked' : '' %>>

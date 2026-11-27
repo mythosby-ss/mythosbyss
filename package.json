@@ -11,7 +11,13 @@
     "build:css": "tailwindcss -i ./src/input.css -o ./public/css/styles.css --minify",
     "postinstall": "npm run build:css",
     "slugs": "node scripts/list-slugs.js",
-    "images:optimize": "node scripts/optimize-images.js"
+    "images:optimize": "node scripts/optimize-images.js",
+    "test:payments": "node scripts/test-payment-rules.js",
+    "ops:export": "node scripts/ops-export.js",
+    "ops:shipway": "node scripts/ops-shipway.js",
+    "ops:escalate": "node scripts/ops-escalate.js",
+    "ops:pincode": "node scripts/ops-pincode.js",
+    "test:ops": "node scripts/test-ops.js"
   },
   "engines": {
     "node": ">=18"
@@ -26,9 +32,10 @@
     "express-session": "^1.18.0",
     "helmet": "^7.1.0",
     "multer": "^2.5.0",
+    "nodemailer": "^10.6.1",
     "pdfkit": "^0.20.2",
     "razorpay": "^2.9.4",
-    "sharp": "^0.33.5",
+    "sharp": "^0.35.5",
     "tailwindcss": "^3.4.17"
   },
   "devDependencies": {

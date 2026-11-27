@@ -82,7 +82,7 @@
 <% } %>
 
 <!-- ═══════════════════ ORDER + REVENUE TREND CHARTS ═══════════════════ -->
-<div class="grid lg:grid-cols-2 gap-4">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
   <section class="a-card p-5">
     <h2 class="a-h mb-1">Order Trend</h2>
     <p class="text-xs text-neutral-400 mb-4">Monthly total vs delivered orders</p>
@@ -275,7 +275,7 @@
 <section class="a-card p-5">
   <h2 class="a-h mb-4">Download Monthly Reports</h2>
   <p class="text-sm text-neutral-500 mb-5">Download CSV reports for deeper analysis in Excel or Google Sheets.</p>
-  <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
     <% [
       { type: 'orders', label: 'Order Report', desc: 'Day-wise orders, revenue and expenses', icon: 'M21 8l-9-5-9 5v8l9 5 9-5z' },
       { type: 'product-performance', label: 'Product Performance', desc: 'Units, revenue, margin and RTO by product', icon: 'M4 20V10M10 20V4M16 20v-8M22 20H2' },

@@ -3,7 +3,7 @@
   <form method="post" action="/admin/website/support" class="a-card p-5 space-y-4">
     <input type="hidden" name="_csrf" value="<%= csrf %>">
     <h2 class="a-h">Customer support</h2>
-    <div class="grid md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div><label class="a-lbl" for="support_whatsapp">WhatsApp number (10 digits)</label><input class="a-in" id="support_whatsapp" name="support_whatsapp" inputmode="numeric" maxlength="10" value="<%= s.support_whatsapp %>"></div>
       <div><label class="a-lbl" for="support_phone">Call number</label><input class="a-in" id="support_phone" name="support_phone" inputmode="numeric" maxlength="10" value="<%= s.support_phone %>"></div>
       <div><label class="a-lbl" for="support_email">Support email</label><input class="a-in" id="support_email" name="support_email" type="email" value="<%= s.support_email %>"></div>

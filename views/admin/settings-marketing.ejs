@@ -17,7 +17,7 @@
       <div class="flex-1 min-w-[240px]"><h2 class="a-h">Meta (Facebook &amp; Instagram)</h2><p class="text-sm text-neutral-500 mt-1">The Pixel tracks visits, add-to-cart, checkout and purchases so Meta can optimise your ads. Ad spend for the home page comes from <a class="text-adm-blue" href="/admin/plugins#metaads">Plugins → Meta Ads</a>.</p></div>
       <button class="a-btn">Save</button>
     </div>
-    <div class="grid md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="md:col-span-2 rounded-lg border border-neutral-200 p-4 text-sm space-y-1">
         <p class="font-medium">Pixel &amp; Conversions API (set in the server's <code>.env</code> file)</p>
         <p>META_PIXEL_ID: <%- meta.pixelEnv ? pill('set', 'green') : meta.pixel ? pill('using the ID below', 'amber') : pill('missing', 'red') %>
@@ -58,7 +58,7 @@
       <div class="flex-1 min-w-[240px]"><h2 class="a-h">Google</h2><p class="text-sm text-neutral-500 mt-1">Analytics, Ads conversion tracking, Tag Manager and Search Console. Fill only what you use. Ad spend for the home page comes from <a class="text-adm-blue" href="/admin/plugins#googleads">Plugins → Google Ads</a>.</p></div>
       <button class="a-btn">Save</button>
     </div>
-    <div class="grid md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <% field('mk_ga4_id', 'Google Analytics 4 Measurement ID', 'Starts with G-', 'Analytics → Admin → Data streams → your web stream'); %>
       <% field('mk_ga4_api_secret', 'GA4 Measurement Protocol API secret', 'Paste the API secret', 'Same data stream → Measurement Protocol API secrets → Create', { secret: true }); %>
       <% field('mk_gads_id', 'Google Ads tag ID', 'Starts with AW-', 'Google Ads → Goals → Conversions → your action → Tag setup'); %>

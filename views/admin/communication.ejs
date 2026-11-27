@@ -1,5 +1,5 @@
 <%- include('partials/top') %>
-<div class="grid md:grid-cols-3 gap-4">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
   <section class="a-card p-5"><h2 class="a-h">WhatsApp status</h2>
     <p class="mt-2 text-sm"><%- configured ? pill('Connected (Cloud API credentials found)', 'green') : pill('Not configured - messages are only logged', 'amber') %></p>
     <form method="post" action="/admin/communication/toggle" class="mt-4 flex items-center gap-3"><input type="hidden" name="_csrf" value="<%= csrf %>"><label class="text-sm flex items-center gap-2"><input type="checkbox" name="enabled" value="1" <%= enabled ? 'checked' : '' %>> Send order notifications</label><button class="a-btn-o !py-1">Save</button></form>

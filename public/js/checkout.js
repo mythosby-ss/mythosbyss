@@ -36,6 +36,11 @@
       $('[data-reason]', box).textContent = v.ok ? '' : v.reason;
     }
     if (!method() && o.selected) form.querySelector('input[name="paymentMethod"][value="' + o.selected + '"]').checked = true;
+    if ('payNote' in o) { // why COD is unavailable + "Pay online & save ₹X"
+      const n = o.payNote; const box = $('[data-pay-note]', form);
+      box.classList.toggle('hidden', !n);
+      if (n) { $('[data-pay-note-reason]', box).textContent = n.reason; $('[data-pay-note-amt]', box).textContent = money(n.save); $('[data-pay-note-save]', box).classList.toggle('hidden', !n.save); }
+    }
     const pinErr = form.querySelector('[data-err="pincode"]');
     if (pinErr && 'serviceable' in o) pinErr.textContent = o.serviceable === false ? o.pincodeMessage : '';
     renderTotals();

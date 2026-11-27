@@ -1,5 +1,5 @@
 <%- include('partials/top') %>
-<div class="grid xl:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
   <section class="a-card xl:col-span-2">
     <div class="p-5 pb-3 flex flex-wrap items-center justify-between gap-3"><h2 class="a-h">UGC video testimonials</h2>
       <form method="post" action="/admin/website/testimonials/import" class="flex gap-2"><input type="hidden" name="_csrf" value="<%= csrf %>"><input class="a-in !w-72" name="folder" placeholder="Drive folder link with UGC videos" aria-label="UGC Drive folder"><button class="a-btn-o" <%= driveOn ? '' : 'disabled' %>>Import videos</button></form></div>

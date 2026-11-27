@@ -28,10 +28,10 @@ router.get('/catalogue', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.get('/catalogue/new', (req, res) => res.render('admin/product-form', { title: 'Create product', p: null }));
+router.get('/catalogue/new', (req, res) => res.render('admin/product-form', { title: 'Create product', p: null, defaultWeight: require('../../lib/settings').num('default_weight_kg') }));
 router.get('/catalogue/:id(\\d+)/edit', (req, res, next) => {
   const p = catalog.all.find((x) => x.id === Number(req.params.id)); if (!p) return next();
-  res.render('admin/product-form', { title: 'Edit product', p, driveOn: drive.enabled() });
+  res.render('admin/product-form', { title: 'Edit product', p, driveOn: drive.enabled(), defaultWeight: require('../../lib/settings').num('default_weight_kg') });
 });
 
 router.post('/catalogue/save', async (req, res, next) => {
@@ -60,6 +60,10 @@ router.post('/catalogue/save', async (req, res, next) => {
     }
     const optCost = (v) => (String(v ?? '').trim() === '' ? null : Math.max(0, num(v))); // empty = use profit default
     await db.run('UPDATE products SET packaging_cost=?, shipping_cost=? WHERE id=?', [optCost(b.packaging_cost), optCost(b.shipping_cost), pid]);
+    // weight & payment mode (lib/codrules.js): chargeable weight = max(dead weight, L x B x H / 5000)
+    const dim = { weightKg: optCost(b.weight_kg), lengthCm: optCost(b.length_cm), breadthCm: optCost(b.breadth_cm), heightCm: optCost(b.height_cm) };
+    await db.run('UPDATE products SET weight_kg=?, length_cm=?, breadth_cm=?, height_cm=?, chargeable_weight_kg=?, payment_mode_override=? WHERE id=?',
+      [dim.weightKg, dim.lengthCm, dim.breadthCm, dim.heightCm, require('../../lib/codrules').chargeableWeight(dim), b.payment_mode_override === 'prepaid_only' ? 'prepaid_only' : 'auto', pid]);
     const existing = (await db.q('SELECT id FROM variants WHERE product_id=?', [pid])).map((v) => v.id);
     const keep = rows.filter((r) => r.id).map((r) => r.id);
     for (const vid of existing.filter((x) => !keep.includes(x))) await db.run('DELETE FROM variants WHERE id=?', [vid]);

@@ -33,7 +33,7 @@ router.post('/add-many', (req, res) => {
   const picks = [].concat(req.body.add || []).slice(0, 8).map((v) => String(v).split(':'));
   let added = 0;
   for (const [slug, sku] of picks) if (cartLib.addLine(req.session.cart, slug, sku, 1) === 'ok') { added++; events.track(req, 'add_to_cart', { product: slug }); }
-  if (wantsJson(req)) return res.status(added ? 200 : 400).json({ ok: added > 0, added, count: cartLib.hydrate(req.session.cart).count });
+  if (wantsJson(req)) return res.status(added ? 200 : 400).json({ ok: added > 0, added, count: cartLib.hydrate(req.session.cart).count, message: added ? undefined : 'Sorry, these items are out of stock.' });
   res.redirect('/cart');
 });
 

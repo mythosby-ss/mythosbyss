@@ -26,5 +26,5 @@ module.exports = [
   { label: 'Website', icon: I.globe, children: [['UGC testimonials', '/admin/website/testimonials'], ['Customer reviews', '/admin/website/reviews'], ['Policy pages & support', '/admin/website/pages']] },
   { label: 'Communication', href: '/admin/communication', icon: I.chat },
   { label: 'Plugins', href: '/admin/plugins', icon: I.plug },
-  { label: 'Settings', icon: I.gear, children: [['Store & charges', '/admin/settings'], ['COD & RTO rules', '/admin/settings/cod'], ['Shipping & NDR', '/admin/settings/shipping'], ['Billing & invoice', '/admin/settings/billing'], ['Marketing & tracking', '/admin/settings/marketing'], ['Shipping label', '/admin/settings/label']] }
+  { label: 'Settings', icon: I.gear, children: [['Store & charges', '/admin/settings'], ['COD & RTO rules', '/admin/settings/cod'], ['Shipping & NDR', '/admin/settings/shipping'], ['Billing & invoice', '/admin/settings/billing'], ['Marketing & tracking', '/admin/settings/marketing'], ['Shipping label', '/admin/settings/label'], ['Ops & owner emails', '/admin/settings/ops']] }
 ];

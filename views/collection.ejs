@@ -6,6 +6,7 @@
   </div>
 </section>
 <div class="container-x py-8">
+  <% if (typeof deals !== 'undefined' && deals) { %><%- include('partials/deals-banner', { deals }) %><% } %>
   <div class="flex flex-wrap gap-2 mb-6" aria-label="Categories">
     <a href="/products" class="px-4 py-2 rounded-full text-sm border <%= activeCat === 'all' ? 'bg-ink text-white border-ink' : 'border-neutral-300 hover:border-ink' %>">All</a>
     <% categories.forEach((c) => { %>

@@ -1,5 +1,5 @@
 <%- include('partials/top') %>
-<div class="grid xl:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
   <div class="xl:col-span-2 space-y-6">
     <section class="a-card p-5">
       <div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="a-h"><%= o.id %></h2><p class="text-sm text-neutral-500">Placed <%= dt(o.created_at) %></p></div><div class="flex gap-2"><%- pill(o.status) %> <%- pill(o.payment_status) %></div></div>
@@ -62,9 +62,10 @@
           <div class="grid grid-cols-2 gap-2"><div><label class="a-lbl">Courier</label><input class="a-in" name="courier" list="courier-list" value="<%= o.courier || '' %>" placeholder="e.g. Delhivery" required><datalist id="courier-list"><% shipInfo.couriers.forEach((c) => { %><option value="<%= c %>"><% }) %></datalist></div><div><label class="a-lbl">AWB</label><input class="a-in" name="awb" value="<%= o.awb || '' %>" required></div></div>
           <div><label class="a-lbl">Courier charge (your cost)</label><input class="a-in" type="number" step="0.01" name="courier_charge" value="<%= o.courier_charge || '' %>"></div>
         <% } %>
-        <% if (s === 'cancelled' || s === 'rto') { %><input class="a-in" name="note" placeholder="Reason (optional)"><% } %>
+        <% if (s === 'cancelled' || s === 'rto' || s === 'returned') { %><input class="a-in" name="note" placeholder="Reason (optional)"><% } %>
+        <% if (s === 'returned') { %><p class="text-xs text-neutral-500">Stock is not restored automatically (check the item first). Record the refund and reverse-pickup charge below.</p><% } %>
         <% if (s === 'ndr') { %><input class="a-in" name="note" placeholder="Courier's reason, e.g. customer not available"><% } %>
-        <button class="<%= s === 'cancelled' || s === 'rto' ? 'a-btn-r' : 'a-btn' %> w-full"><%= s === 'shipped' && o.status === 'ndr' ? 'Re-attempt requested' : 'Mark as ' + statusLabel[s] %></button>
+        <button class="<%= ['cancelled', 'rto', 'returned'].includes(s) ? 'a-btn-r' : 'a-btn' %> w-full"><%= s === 'shipped' && o.status === 'ndr' ? 'Re-attempt requested' : 'Mark as ' + statusLabel[s] %></button>
       </form>
       <% }) %>
       <p class="text-xs text-neutral-500">Shipped, out-for-delivery and delivered updates are sent to the customer on WhatsApp automatically.</p>
@@ -77,7 +78,8 @@
         <% if (o.risk.blacklisted) { %> <span class="pill-red">COD blacklisted</span><% } %> <a class="underline text-neutral-500 ml-1" href="/admin/settings/cod#phones">COD rules</a></p>
       <p class="mt-2"><%= o.address %>, <%= o.city %>, <%= o.state %> - <%= o.pincode %></p>
       <% if (o.note) { %><p class="mt-2 text-neutral-600">Note: <%= o.note %></p><% } %>
-      <p class="mt-2 text-xs text-neutral-500">Source: <%= o.utm_source || 'direct' %><%= o.utm_campaign ? ' / ' + o.utm_campaign : '' %></p>
+      <% if (o.preferred_language) { %><p class="mt-2">Preferred language: <b><%= o.preferred_language %></b></p><% } %>
+      <p class="mt-2 text-xs text-neutral-500">Source: <%= o.utm_source || 'direct' %><%= o.utm_campaign ? ' / ' + o.utm_campaign : '' %><%= o.utm_content ? ' / ' + o.utm_content : '' %></p>
       <a class="a-btn-o mt-3" target="_blank" href="/admin/orders/<%= o.id %>/label">Print label</a> <a class="a-btn-o mt-3" target="_blank" href="/admin/orders/<%= o.id %>/invoice">Tax invoice</a> <a class="a-btn-o mt-3" href="/admin/customers/<%= o.customer_id %>">Customer</a>
     </section>
 
@@ -86,7 +88,13 @@
         <input type="hidden" name="_csrf" value="<%= csrf %>">
         <div><label class="a-lbl">Courier</label><input class="a-in" name="courier" value="<%= o.courier || '' %>"></div>
         <div><label class="a-lbl">AWB / tracking number</label><input class="a-in" name="awb" value="<%= o.awb || '' %>"></div>
-        <div><label class="a-lbl">Courier charge</label><input class="a-in" type="number" step="0.01" name="courier_charge" value="<%= o.courier_charge || 0 %>"></div>
+        <div><label class="a-lbl">Courier charge (forward)</label><input class="a-in" type="number" step="0.01" name="courier_charge" value="<%= o.courier_charge || 0 %>"></div>
+        <div class="grid grid-cols-3 gap-2">
+          <div><label class="a-lbl">RTO charge</label><input class="a-in" type="number" step="0.01" min="0" name="rto_charge" value="<%= o.rto_charge ?? '' %>"></div>
+          <div><label class="a-lbl">COD fee</label><input class="a-in" type="number" step="0.01" min="0" name="courier_cod_charge" value="<%= o.courier_cod_charge ?? '' %>"></div>
+          <div><label class="a-lbl">Reverse pickup</label><input class="a-in" type="number" step="0.01" min="0" name="reverse_pickup_charge" value="<%= o.reverse_pickup_charge ?? '' %>"></div>
+        </div>
+        <p class="text-xs text-neutral-400">Courier's charges to you. Used for the RTO / return loss in the daily report. Leave empty if not known yet.</p>
         <button class="a-btn-o w-full">Save logistics</button>
       </form></section>
 

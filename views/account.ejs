@@ -13,6 +13,14 @@
     </form>
     <div class="md:col-span-2">
       <h2 class="text-xl font-semibold mb-4">Orders</h2>
+      <% if (stats.total) { %>
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6" aria-label="Your order summary">
+        <% [['Total orders', stats.total, 'text-ink'], ['Delivered', stats.delivered, 'text-green-700'], ['In progress', stats.inProgress, 'text-amber-700'], ['Cancelled', stats.cancelled, 'text-neutral-600'], ['Returned', stats.returned, 'text-red-700']].forEach(([l, v, c]) => { %>
+        <div class="rounded-xl border border-neutral-200 p-3 text-center"><p class="text-2xl font-semibold <%= c %>"><%= v %></p><p class="text-xs text-neutral-600 mt-0.5"><%= l %></p></div>
+        <% }) %>
+      </div>
+      <% if (stats.spent) { %><p class="text-sm text-neutral-600 -mt-3 mb-6">Total spent on delivered orders: <b class="text-ink"><%= money(stats.spent) %></b></p><% } %>
+      <% } %>
       <% if (!list.length) { %><p class="text-neutral-600">No orders yet. <a class="underline" href="/products">Start shopping</a>.</p><% } %>
       <ul class="space-y-4">
         <% list.forEach((o) => { %>

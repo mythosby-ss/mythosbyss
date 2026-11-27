@@ -6,26 +6,25 @@ const path = require('path');
 const PLUGINS = [
   {
     id: 'logistics',
-    name: 'Shiprocket Logistics',
+    name: 'Logistics',
     category: 'Logistics & Shipping',
-    badge: 'Popular',
     color: '#f59e0b',
     icon: 'M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0',
-    desc: 'Connect Shiprocket to auto-generate AWBs, print labels, track shipments, and manage NDR (Non-Delivery Reports) from your admin.',
-    docsHint: 'shiprocket.in',
-    docsUrl: 'https://apidocs.shiprocket.in/',
-    features: ['Auto AWB generation', 'Real-time tracking', 'NDR management', 'COD remittance'],
-    modalDesc: 'Shiprocket is India\'s largest logistics aggregator. Connect your account to automatically book shipments, generate AWBs, and track orders across 25+ courier partners.',
+    desc: 'Save the API details of the courier or shipping aggregator you sign with (any company). Until it is connected, ship orders manually: enter the courier and AWB when marking an order shipped.',
+    docsHint: 'Any courier / aggregator',
+    features: ['Any courier / aggregator', 'Manual mode until connected', 'Courier status webhook', 'COD remittance tracking'],
+    modalDesc: 'Works with whichever logistics company you sign the contract with. Your partner gives you API login details; save them here. Automatic AWB booking and tracking need a small adapter for that partner (lib/shipping/) - until then orders are shipped manually.',
     howTo: [
-      'Go to <b>app.shiprocket.in</b> and log in to your account',
-      'Navigate to <b>Settings → API</b>',
-      'Your login email and password serve as API credentials',
-      'Paste them below — Shiprocket uses token-based auth'
+      'Sign the contract with your courier or aggregator',
+      'Ask them for <b>API access</b> (usually under <b>Settings → API</b> in their panel)',
+      'Copy the API user / email and the API password or key',
+      'Paste them below with the partner\'s name and your pickup pincode'
     ],
     fields: [
-      { key: 'SHIPROCKET_EMAIL', envKey: 'SHIPROCKET_EMAIL', label: 'Shiprocket Account Email', placeholder: 'Enter your Shiprocket login email', required: true, secret: false, hint: 'The email you use to log in to Shiprocket' },
-      { key: 'SHIPROCKET_PASSWORD', envKey: 'SHIPROCKET_PASSWORD', label: 'Shiprocket Password', required: true, secret: true, hint: 'Your Shiprocket account password' },
-      { key: 'SHIPROCKET_PICKUP_PINCODE', envKey: 'SHIPROCKET_PICKUP_PINCODE', label: 'Default Pickup Pincode', placeholder: '6-digit warehouse pincode', required: false, secret: false, hint: 'Pincode of your warehouse / dispatch address' }
+      { key: 'LOGISTICS_PARTNER', envKey: 'LOGISTICS_PARTNER', label: 'Logistics partner name', placeholder: 'Company you signed with', required: true, secret: false, hint: 'Shown to your team, e.g. on shipped orders' },
+      { key: 'LOGISTICS_API_USER', envKey: 'LOGISTICS_API_USER', label: 'API user / email', placeholder: 'API login given by your partner', required: false, secret: false, hint: 'Leave blank if your partner only gives an API key' },
+      { key: 'LOGISTICS_API_KEY', envKey: 'LOGISTICS_API_KEY', label: 'API password / key', required: true, secret: true, hint: 'Saved only in .env, never shown again' },
+      { key: 'LOGISTICS_PICKUP_PINCODE', envKey: 'LOGISTICS_PICKUP_PINCODE', label: 'Default pickup pincode', placeholder: '6-digit warehouse pincode', required: false, secret: false, hint: 'Pincode of your warehouse / dispatch address' }
     ]
   },
 
@@ -99,7 +98,7 @@ const PLUGINS = [
       'Get your <b>App ID</b> from developers.facebook.com if using the Marketing API'
     ],
     fields: [
-      { key: 'META_ACCESS_TOKEN', envKey: 'META_ACCESS_TOKEN', label: 'Meta System User Access Token', required: true, secret: true, hint: 'Long-lived token with ads_read permission from Meta Business Manager' },
+      { key: 'META_ACCESS_TOKEN', envKey: 'META_ACCESS_TOKEN', label: 'Meta System User Access Token', required: true, secret: true, hint: 'A System User token with the ads_read permission (Business Settings → System users → Generate token). A Pixel / Conversions API token will NOT work.' },
       { key: 'META_AD_ACCOUNT_ID', envKey: 'META_AD_ACCOUNT_ID', label: 'Ad Account ID', placeholder: 'Enter your Ad Account ID (starts with act_)', required: true, secret: false, hint: 'From Ads Manager URL or account settings — starts with act_' },
       { key: 'META_APP_ID', envKey: 'META_APP_ID', label: 'App ID (optional)', required: false, placeholder: 'Enter your Meta App ID', secret: false, hint: 'Only needed if using Graph API for campaign management' }
     ]
@@ -182,6 +181,13 @@ router.post('/plugins/:id/save', (req, res) => {
       val = id;
     }
     if (val) updates[field.envKey] = val;
+  }
+  // Meta: the Ad Account ID is often confused with the Pixel / dataset ID (both are long numbers)
+  if (updates.META_AD_ACCOUNT_ID) {
+    const acct = updates.META_AD_ACCOUNT_ID.replace(/^act_/, '');
+    const pixel = String(process.env.META_PIXEL_ID || require('../../lib/settings').get('mk_pixel_id') || '');
+    if (!/^\d{6,20}$/.test(acct)) { res.flash('Ad Account ID must be digits (with or without act_).', 'err'); return res.redirect('/admin/plugins'); }
+    if (pixel && acct === pixel) { res.flash('That is your Pixel ID, not the Ad Account ID. Copy the number after "act=" in the Ads Manager address bar (or Business Settings → Accounts → Ad accounts).', 'err'); return res.redirect('/admin/plugins'); }
   }
 
   // Update or append each env var

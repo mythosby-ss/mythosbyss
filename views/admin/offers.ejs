@@ -5,17 +5,17 @@
 <form method="post" action="/admin/offers/settings" class="a-card p-5 space-y-5">
   <input type="hidden" name="_csrf" value="<%= csrf %>">
   <div><h2 class="a-h">Order value offers</h2><p class="text-sm text-neutral-500 mt-1">Ways to make each order bigger, so shipping and ad cost are spread over more rupees.</p></div>
-  <section class="grid md:grid-cols-3 gap-4">
+  <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
     <div><label class="a-lbl" for="shipping_fee">Shipping fee below the threshold (₹)</label><input class="a-in" type="number" min="0" id="shipping_fee" name="shipping_fee" value="<%= s.shipping_fee %>"></div>
     <div><label class="a-lbl" for="free_shipping_threshold">Free delivery from (₹ cart value, 0 = off)</label><input class="a-in" type="number" min="0" id="free_shipping_threshold" name="free_shipping_threshold" value="<%= s.free_shipping_threshold %>"></div>
     <p class="text-xs text-neutral-500 md:self-end">The cart shows "Add ₹X more for FREE delivery" only when the shipping fee is above ₹0.<%= Number(s.shipping_fee) ? '' : ' Shipping is currently free for everyone, so the bar is hidden.' %></p>
   </section>
-  <section class="grid md:grid-cols-3 gap-4 border-t border-neutral-100 pt-5">
+  <section class="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-neutral-100 pt-5">
     <div class="md:col-span-2"><label class="a-lbl" for="qty_offer_tiers">Quantity offers (same product, any size): "quantity:₹ off"</label><input class="a-in" id="qty_offer_tiers" name="qty_offer_tiers" value="<%= s.qty_offer_tiers %>" placeholder="2:30, 3:75">
       <p class="text-xs text-neutral-500 mt-1"><%= tiers.length ? 'Live: ' + tiers.map((t) => 'buy ' + t.qty + ' save ₹' + t.off).join(', ') : 'Off. Example: "2:30, 3:75" = buy 2 save ₹30, buy 3 save ₹75 (per product).' %></p></div>
     <label class="flex items-center gap-2 text-sm md:self-center"><input type="checkbox" name="qty_offer_on_bundles" value="1" <%= s.qty_offer_on_bundles === '1' ? 'checked' : '' %>> Also on bundles</label>
   </section>
-  <section class="grid md:grid-cols-3 gap-4 border-t border-neutral-100 pt-5">
+  <section class="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-neutral-100 pt-5">
     <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="upsell_enabled" value="1" <%= s.upsell_enabled === '1' ? 'checked' : '' %>> Show "Frequently bought together" and cart add-ons</label>
     <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="upsell_auto" value="1" <%= s.upsell_auto === '1' ? 'checked' : '' %>> Pick add-ons automatically when none are set</label>
     <div><label class="a-lbl" for="upsell_max">How many add-ons to show</label><input class="a-in" type="number" min="1" max="6" id="upsell_max" name="upsell_max" value="<%= s.upsell_max %>"></div>
@@ -70,7 +70,7 @@
     <input type="hidden" name="_csrf" value="<%= csrf %>">
     <% const pOpt = (sel) => products.map((p) => `<option value="${esc(p.slug)}" ${p.slug === sel ? 'selected' : ''}>${esc(p.name)} - ₹${p.price}</option>`).join(''); const cur = addons[editAddon] || []; %>
     <div><label class="a-lbl" for="product_slug">Product</label><select class="a-in" id="product_slug" name="product_slug" required><option value="">Choose...</option><%- pOpt(editAddon) %></select></div>
-    <div class="grid md:grid-cols-3 gap-3">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <% [0, 1, 2].forEach((i) => { %><div><label class="a-lbl">Add-on <%= i + 1 %></label><select class="a-in" name="addon_slug"><option value="">-</option><%- pOpt(cur[i]) %></select></div><% }) %>
     </div>
     <button class="a-btn">Save add-ons</button> <span class="text-xs text-neutral-500">Leave all empty to clear.</span>

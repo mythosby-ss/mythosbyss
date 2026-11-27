@@ -8,6 +8,9 @@ const codrules = require('../lib/codrules');
 const upsell = require('../lib/upsell');
 const cartLib = require('../lib/cart');
 const seo = require('../lib/seo');
+// "Hot Deals" ribbon on the New arrivals section (text in Admin -> Settings; empty = hidden)
+const dealsBanner = (list) => (settings.get('new_arrivals_banner') ? { title: settings.get('new_arrivals_banner'), sub: settings.get('new_arrivals_banner_sub'),
+  upto: Math.max(0, ...list.map((p) => p.discount || 0)) } : null);
 const { memo } = require('../lib/cache');
 
 const SORTS = { featured: null, 'price-asc': (a, b) => a.price - b.price, 'price-desc': (a, b) => b.price - a.price, 'name-asc': (a, b) => a.name.localeCompare(b.name) };
@@ -34,7 +37,7 @@ router.get('/', async (req, res, next) => {
     res.render('index', {
       ...seo.home(req), jsonLd: [seo.organization(req), seo.website(req)],
       slides: banners.map((b) => ({ title: b.title, text: b.subtitle, cta: b.cta_text, href: b.link || '/products', theme: b.theme, image: b.image ? catalog.imgUrl(b.image) : null })),
-      featured: catalog.featuredPerCategory(), newArrivals: catalog.newArrivals().slice(0, 4),
+      featured: catalog.featuredPerCategory(), ...(() => { const n = catalog.newArrivals().slice(0, Math.max(6, settings.num('new_arrivals_min'))); return { newArrivals: n, deals: dealsBanner(n) }; })(),
       reviews, testimonials: [...tests, ...reviewTestimonials].slice(0, 8)
     });
   } catch (e) { next(e); }
@@ -52,7 +55,7 @@ router.get('/collections/:slug', (req, res, next) => {
 
 router.get('/new-arrivals', (req, res) => {
   const sort = req.query.sort in SORTS ? req.query.sort : 'featured';
-  res.render('collection', { ...seo.collection(req, { name: 'New Arrivals' }), heading: 'New arrivals', blurb: 'The latest additions to our range.', activeCat: 'new', sort, list: sortList(catalog.newArrivals(), sort) });
+  res.render('collection', { ...seo.collection(req, { name: 'New Arrivals' }), heading: 'New arrivals', blurb: 'The latest additions to our range.', activeCat: 'new', sort, list: sortList(catalog.newArrivals(), sort), deals: dealsBanner(catalog.newArrivals()) });
 });
 
 router.get('/products', async (req, res) => {
@@ -85,10 +88,18 @@ router.get('/products/:slug', async (req, res, next) => {
       ...seo.product(req, product), ogImage: product.hasImage ? abs(req, product.image) : null, ogType: 'product', ogPrice: Number(product.price).toFixed(2),
       jsonLd: [seo.productLd(req, product, reviews), seo.breadcrumbs(req, [['Home', '/'], [product.categoryName, `/collections/${product.category}`], [product.name, `/products/${product.slug}`]])],
       product, related: catalog.related(product), reviews, testimonials: tests, initial,
-      addons, defaultVariant: upsell.defaultVariant, offerTiers: cartLib.offerTiers()
+      addons, defaultVariant: upsell.defaultVariant, offerTiers: cartLib.offerTiers(), offers: productOffers(res.locals.offers, product, initial)
     });
   } catch (e) { next(e); }
 });
+
+// Payment lines on the product page follow the cart rules for one unit of this product (lib/codrules cartRule)
+function productOffers(base, product, variant) {
+  const r = codrules.cartRule([{ product, qty: 1 }], (variant || product).price);
+  return { ...base, codEnabled: base.codEnabled && r.cod, partialEnabled: base.partialEnabled && r.partial,
+    partialText: r.advance ? money(r.advance) : base.partialText, onlineOnly: r.tier === 'prepaid_only' ? r.codReason : '' };
+}
+const money = (n) => '\u20B9' + Number(n).toLocaleString('en-IN');
 
 // Product-page delivery check (no login needed). Order-value and phone rules are applied later at checkout.
 const pinLimit = rateLimit({ windowMs: 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false });
@@ -98,9 +109,14 @@ router.get('/api/pincode/:pin', pinLimit, async (req, res, next) => {
     const info = await codrules.pincodeInfo(pin);
     if (!info.valid) return res.json({ ok: false, message: 'Enter a valid 6-digit pincode.' });
     if (!info.serviceable) return res.json({ ok: true, serviceable: false, message: `Sorry, we do not deliver to ${pin} yet.` });
-    const cod = settings.on('cod_enabled') && !info.codBlocked;
-    const partial = settings.on('partial_cod_enabled') && (cod || settings.on('risk_allow_partial'));
-    const pay = cod ? 'Cash on delivery available.' : partial ? 'Pay online or use Partial COD (full cash on delivery is not available here).' : 'Online payment only for this pincode.';
+    // ?slug=<product>: also apply that product's weight / price / "prepaid only" rule (one unit)
+    const p = catalog.bySlug[String(req.query.slug || '')];
+    const r = p ? codrules.cartRule([{ product: p, qty: 1 }], p.price) : { cod: true, partial: true };
+    const pinCod = settings.on('cod_enabled') && !info.codBlocked;
+    const cod = pinCod && r.cod;
+    const partial = settings.on('partial_cod_enabled') && r.partial && (pinCod || settings.on('risk_allow_partial'));
+    const why = !r.cod && r.codReason ? r.codReason + ' ' : '';
+    const pay = cod ? 'Cash on delivery available.' : partial ? why + 'Pay online or use Partial COD.' : why || 'Online payment only for this pincode.';
     res.json({ ok: true, serviceable: true, cod, partial, message: `Delivery to ${pin} in ${settings.get('delivery_days_text')}. ${pay}` });
   } catch (e) { next(e); }
 });

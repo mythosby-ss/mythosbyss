@@ -1,0 +1,5 @@
+product_id,name,cost_price,packaging_cost,selling_price,chargeable_weight_kg,is_bundle
+cast-iron-dosa-tawa,Cast Iron Dosa Tawa,450,25,1199,2.2,no
+airtight-container-set,Airtight Container Set,180,15,599,0.8,no
+steel-water-bottle,Steel Water Bottle,220,12,699,0.6,no
+tiffin-jug-combo,Tiffin & Jug Combo,520,30,1499,1.6,yes

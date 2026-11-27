@@ -6,10 +6,23 @@ const rateLimit = require('express-rate-limit');
 const needLogin = (req, res, next) => (res.locals.customer ? next() : res.redirect('/login?next=' + encodeURIComponent(req.originalUrl)));
 
 router.get('/account', needLogin, async (req, res) => {
-  const list = await db.q('SELECT * FROM orders WHERE customer_id=? ORDER BY created_at DESC', [res.locals.customer.id]);
-  for (const o of list) o.items = await db.q('SELECT product_name, variant_label, qty FROM order_items WHERE order_id=?', [o.id]);
-  const me = await db.one('SELECT * FROM customers WHERE id=?', [res.locals.customer.id]);
-  res.render('account', { pageTitle: 'My account | MythosBySS', noindex: true, list, me, statusLabel: orders.STATUS_LABEL, saved: req.query.saved });
+  const id = res.locals.customer.id;
+  const [list, items, me] = await Promise.all([
+    db.q('SELECT * FROM orders WHERE customer_id=? ORDER BY created_at DESC', [id]),
+    db.q('SELECT i.order_id, i.product_name, i.variant_label, i.qty FROM order_items i JOIN orders o ON o.id=i.order_id WHERE o.customer_id=? ORDER BY i.id', [id]), // one query, not one per order
+    db.one('SELECT * FROM customers WHERE id=?', [id])
+  ]);
+  const by = {}; for (const i of items) (by[i.order_id] = by[i.order_id] || []).push(i);
+  for (const o of list) o.items = by[o.id] || [];
+  // Order summary: unpaid online attempts (never placed) are not counted as orders
+  const placed = list.filter((o) => o.status !== 'awaiting_payment' && !(o.status === 'cancelled' && ['pending', 'failed'].includes(o.payment_status)));
+  const count = (...s) => placed.filter((o) => s.includes(o.status)).length;
+  const stats = {
+    total: placed.length, delivered: count('delivered'), cancelled: count('cancelled'), returned: count('rto', 'returned'),
+    inProgress: count('pending_confirmation', 'confirmed', 'packed', 'shipped', 'out_for_delivery', 'ndr'),
+    spent: placed.filter((o) => o.status === 'delivered').reduce((s, o) => s + (o.total || 0), 0)
+  };
+  res.render('account', { pageTitle: 'My account | MythosBySS', noindex: true, list, me, stats, statusLabel: orders.STATUS_LABEL, saved: req.query.saved });
 });
 router.post('/account/profile', needLogin, async (req, res) => {
   await db.run('UPDATE customers SET name=?, email=? WHERE id=?', [String(req.body.name || '').trim().slice(0, 80), String(req.body.email || '').trim().slice(0, 120), res.locals.customer.id]);

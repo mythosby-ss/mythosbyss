@@ -1,6 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ['./views/**/*.ejs', './public/js/**/*.js'],
+  // status pill colours are chosen in server code (routes/admin/index.js), so keep them all
+  safelist: ['pill-blue', 'pill-green', 'pill-red', 'pill-amber', 'pill-gray', 'pill-purple'],
   theme: {
     extend: {
       colors: {

@@ -38,7 +38,7 @@
 <% if (tab === 'performance') { %>
 <div class="a-card p-4"><%- include('partials/range', { r, hidden: { tab: 'performance' } }) %></div>
 <section class="a-card p-5"><h2 class="a-h mb-3">Optimization opportunities</h2><ul class="space-y-2 text-sm list-disc pl-5"><% opps.forEach((o) => { %><li><%= o %></li><% }) %><% if (!opps.length) { %><li class="list-none text-neutral-500 -ml-5">Nothing urgent. Nice work.</li><% } %></ul></section>
-<div class="grid lg:grid-cols-3 gap-4">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
   <section class="a-card overflow-x-auto"><h2 class="a-h p-5 pb-3">Top landing pages</h2><table class="a-table"><thead><tr><th>Page</th><th>Views</th><th>Visitors</th></tr></thead><tbody><% perf.landing.forEach((x) => { %><tr><td class="text-xs"><%= x.path %></td><td><%= x.views %></td><td><%= x.visitors %></td></tr><% }) %></tbody></table></section>
   <section class="a-card overflow-x-auto"><h2 class="a-h p-5 pb-3">Traffic sources</h2><table class="a-table"><thead><tr><th>Source</th><th>Visitors</th></tr></thead><tbody><% perf.sources.forEach((x) => { %><tr><td><%= x.source %></td><td><%= x.visitors %></td></tr><% }) %></tbody></table></section>
   <section class="a-card overflow-x-auto"><h2 class="a-h p-5 pb-3">On-site searches</h2><table class="a-table"><thead><tr><th>Term</th><th>Searches</th><th>Results</th></tr></thead><tbody><% perf.searches.forEach((x) => { %><tr><td><%= x.term %></td><td><%= x.n %></td><td class="<%= x.results ? '' : 'text-red-600 font-medium' %>"><%= x.results %></td></tr><% }) %></tbody></table></section>

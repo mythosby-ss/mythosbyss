@@ -17,7 +17,7 @@
   <div class="kpi"><b><%= money(sum.spend) %></b><span>Ad spend (<%= money(be.cpa) %> per order)</span></div>
 </section>
 
-<div class="grid lg:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
   <section class="a-card p-5">
     <h2 class="a-h mb-3">Orders</h2>
     <dl class="text-sm space-y-1.5">
@@ -75,7 +75,7 @@
 </section>
 
 <!-- RTO breakdowns -->
-<div class="grid lg:grid-cols-2 gap-6">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
   <% [['RTO % by pincode', rep.byPincode, 'pincode'], ['RTO % by state', rep.byState], ['RTO % by courier', rep.byCourier], ['RTO % by payment type', rep.byPayment], ['RTO % by city', rep.byCity]].forEach(([title, rows, kind]) => { %>
   <section class="a-card p-5">
     <h2 class="a-h mb-3"><%= title %></h2>
@@ -126,7 +126,7 @@
 <form id="assumptions" method="post" action="/admin/profit/assumptions" class="a-card p-5 space-y-4">
   <input type="hidden" name="_csrf" value="<%= csrf %>"><%- hid %>
   <div><h2 class="a-h">Cost assumptions</h2><p class="text-xs text-neutral-500">Used when a product or order has no value of its own. A courier charge typed when shipping an order always wins.</p></div>
-  <div class="grid md:grid-cols-4 gap-4">
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
     <div><label class="a-lbl" for="pk">Packaging per order (₹)</label><input class="a-in" id="pk" type="number" min="0" step="0.01" name="profit_packaging_default" value="<%= s.profit_packaging_default %>"></div>
     <div><label class="a-lbl" for="fw">Forward shipping per order (₹)</label><input class="a-in" id="fw" type="number" min="0" step="0.01" name="profit_forward_shipping_default" value="<%= s.profit_forward_shipping_default %>"></div>
     <div><label class="a-lbl" for="rv">Reverse shipping per RTO (₹)</label><input class="a-in" id="rv" type="number" min="0" step="0.01" name="profit_reverse_shipping" value="<%= s.profit_reverse_shipping %>"></div>

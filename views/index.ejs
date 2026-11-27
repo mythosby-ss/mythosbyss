@@ -249,7 +249,8 @@
     <h2 class="text-3xl md:text-4xl font-semibold">Just landed</h2>
     <a href="/new-arrivals" class="text-sm font-semibold underline underline-offset-4 hover:text-gold-dark">See new arrivals</a>
   </div>
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-10">
+  <% if (typeof deals !== 'undefined' && deals) { %><%- include('partials/deals-banner', { deals }) %><% } %>
+  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-x-4 gap-y-10">
     <% newArrivals.forEach((p) => { %><%- include('partials/product-card', { p }) %><% }) %>
   </div>
 </section>

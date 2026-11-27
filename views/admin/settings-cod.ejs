@@ -11,7 +11,7 @@
 
   <section class="space-y-3">
     <h3 class="text-sm font-semibold">Prepaid incentive</h3>
-    <div class="grid md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div><label class="a-lbl" for="prepaid_discount">Prepaid discount (₹, 0 = off)</label><input class="a-in" type="number" min="0" id="prepaid_discount" name="prepaid_discount" value="<%= s.prepaid_discount %>">
         <p class="text-xs text-neutral-400 mt-1">Shown as "Pay online &amp; save ₹X" on product, cart and checkout.</p></div>
       <div><label class="a-lbl" for="default_payment_method">Pre-selected at checkout</label>
@@ -26,7 +26,7 @@
   <section class="space-y-3 border-t border-neutral-100 pt-5">
     <h3 class="text-sm font-semibold">Partial COD (small advance online, rest on delivery)</h3>
     <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="partial_cod_enabled" value="1" <%= chk('partial_cod_enabled') %>> Offer partial COD</label>
-    <div class="grid md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div><label class="a-lbl" for="partial_cod_type">Advance type</label>
         <select class="a-in" id="partial_cod_type" name="partial_cod_type">
           <option value="fixed" <%= sel('partial_cod_type', 'fixed') %>>Fixed amount (₹)</option>
@@ -40,7 +40,7 @@
   <section class="space-y-3 border-t border-neutral-100 pt-5">
     <h3 class="text-sm font-semibold">Full cash on delivery</h3>
     <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="cod_enabled" value="1" <%= chk('cod_enabled') %>> Offer full COD</label>
-    <div class="grid md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div><label class="a-lbl" for="cod_min_order">Minimum order value for COD (₹, 0 = none)</label><input class="a-in" type="number" min="0" id="cod_min_order" name="cod_min_order" value="<%= s.cod_min_order %>"></div>
       <div><label class="a-lbl" for="cod_max_order">Maximum order value for COD (₹, 0 = no limit)</label><input class="a-in" type="number" min="0" id="cod_max_order" name="cod_max_order" value="<%= s.cod_max_order %>"></div>
       <div><label class="a-lbl" for="cod_fee">COD fee (₹, also on partial COD)</label><input class="a-in" type="number" min="0" id="cod_fee" name="cod_fee" value="<%= s.cod_fee %>"></div>
@@ -48,9 +48,27 @@
     <p class="text-xs text-neutral-400">Order value = cart total after coupon. Min/max apply to full COD only.</p>
   </section>
 
+  <section class="space-y-3 border-t border-neutral-100 pt-5" id="cart-rules">
+    <h3 class="text-sm font-semibold">Payment rules by cart total &amp; weight</h3>
+    <p class="text-xs text-neutral-500">Uses the cart total (after offers and coupon) and the total chargeable weight (each product's weight × quantity; set it on the product page). The strictest rule wins, and the pincode / phone / RTO rules on this page still apply on top.</p>
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="pay_rules_enabled" value="1" <%= chk('pay_rules_enabled') %>> Use these rules</label>
+    <div class="overflow-x-auto"><table class="a-table min-w-[640px] border border-neutral-200 rounded-lg">
+      <thead><tr><th>Cart</th><th>Allowed</th></tr></thead><tbody>
+      <tr><td>Total below <b>₹<input class="a-in !w-20 !py-1 inline" type="number" min="1" name="pay_rule_cod_below_total" value="<%= s.pay_rule_cod_below_total %>"></b> <b>and</b> weight up to <input class="a-in !w-16 !py-1 inline" type="number" min="0" step="0.1" name="pay_rule_cod_max_weight" value="<%= s.pay_rule_cod_max_weight %>"> kg</td><td>Full COD, partial COD (normal advance above), pay online</td></tr>
+      <tr><td>Total up to <b>₹<input class="a-in !w-20 !py-1 inline" type="number" min="1" name="pay_rule_mid_max_total" value="<%= s.pay_rule_mid_max_total %>"></b> <b>or</b> weight up to <input class="a-in !w-16 !py-1 inline" type="number" min="0" step="0.1" name="pay_rule_mid_max_weight" value="<%= s.pay_rule_mid_max_weight %>"> kg</td><td>Partial COD with ₹<input class="a-in !w-20 !py-1 inline" type="number" min="1" name="pay_rule_mid_advance" value="<%= s.pay_rule_mid_advance %>"> advance, pay online</td></tr>
+      <tr><td>Above that</td><td>Pay online<br><label class="inline-flex items-center gap-2 mt-1"><input type="checkbox" name="pay_rule_high_partial" value="1" <%= chk('pay_rule_high_partial') %>> also allow partial COD, advance by weight:</label>
+        <input class="a-in !py-1 mt-1" name="pay_rule_high_advance_table" value="<%= s.pay_rule_high_advance_table %>" placeholder="3:299">
+        <span class="block text-xs text-neutral-500 mt-1">"up to kg:₹advance", comma separated, e.g. <code>2:249, 3:299</code>. Heavier than the last row = no partial COD.</span></td></tr>
+      <tr><td>Weight over <input class="a-in !w-16 !py-1 inline" type="number" min="0" step="0.1" name="pay_rule_prepaid_only_weight" value="<%= s.pay_rule_prepaid_only_weight %>"> kg, or any product set to "Prepaid only"</td><td>Pay online only</td></tr>
+      </tbody></table></div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div><label class="a-lbl" for="default_weight_kg">Weight for products with no weight set (kg)</label><input class="a-in" type="number" min="0" step="0.01" id="default_weight_kg" name="default_weight_kg" value="<%= s.default_weight_kg %>"></div>
+    </div>
+  </section>
+
   <section class="space-y-3 border-t border-neutral-100 pt-5">
     <h3 class="text-sm font-semibold">Customer risk</h3>
-    <div class="grid md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div><label class="a-lbl" for="rto_block_threshold">Turn off full COD after this many past RTOs (0 = off)</label><input class="a-in" type="number" min="0" id="rto_block_threshold" name="rto_block_threshold" value="<%= s.rto_block_threshold %>"></div>
     </div>
     <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="risk_allow_partial" value="1" <%= chk('risk_allow_partial') %>> When full COD is blocked (risky pincode, blacklisted phone or past RTO), still allow partial COD</label>
@@ -59,7 +77,7 @@
   <section class="space-y-3 border-t border-neutral-100 pt-5">
     <h3 class="text-sm font-semibold">Address &amp; delivery</h3>
     <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="address_require_landmark" value="1" <%= chk('address_require_landmark') %>> Landmark is required at checkout</label>
-    <div class="grid md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div><label class="a-lbl" for="pincode_mode">Serviceable pincodes</label>
         <select class="a-in" id="pincode_mode" name="pincode_mode">
           <option value="all" <%= sel('pincode_mode', 'all') %>>All valid pincodes, except ones marked "not serviceable"</option>
@@ -72,7 +90,7 @@
   <section class="space-y-3 border-t border-neutral-100 pt-5">
     <h3 class="text-sm font-semibold">COD order confirmation</h3>
     <p class="text-xs text-neutral-500">Every cash-on-delivery order starts as "Awaiting confirmation" and cannot be shipped until you confirm it (Orders &gt; Needs confirmation).</p>
-    <div class="grid md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div><label class="a-lbl" for="confirm_autocancel_hours">Auto-cancel if not confirmed within (hours, 0 = never)</label><input class="a-in" type="number" min="0" id="confirm_autocancel_hours" name="confirm_autocancel_hours" value="<%= s.confirm_autocancel_hours %>"></div>
     </div>
     <div><label class="a-lbl" for="confirm_message">WhatsApp confirmation message</label><textarea class="a-in font-mono" rows="8" id="confirm_message" name="confirm_message"><%= String(s.confirm_message || '').replace(/\\n/g, '\n') %></textarea>
@@ -87,7 +105,7 @@
     <h2 class="a-h">Pincode rules</h2>
     <p class="text-sm text-neutral-500 mt-1"><%= pinCounts.total || 0 %> pincode(s) listed: <%= pinCounts.cod_blocked || 0 %> COD-blocked, <%= pinCounts.not_serviceable || 0 %> not serviceable, <%= pinCounts.serviceable || 0 %> serviceable.</p>
   </div>
-  <form method="post" action="/admin/settings/cod/pincodes" class="grid md:grid-cols-[1fr_220px] gap-4">
+  <form method="post" action="/admin/settings/cod/pincodes" class="grid grid-cols-1 md:grid-cols-[1fr_220px] gap-4">
     <input type="hidden" name="_csrf" value="<%= csrf %>">
     <div><label class="a-lbl" for="pincodes-in">Pincodes (paste many, separated by commas, spaces or new lines)</label><textarea class="a-in" id="pincodes-in" name="pincodes" rows="3" placeholder="110001, 110002&#10;400001"></textarea></div>
     <div class="space-y-3">
@@ -122,7 +140,7 @@
     <h2 class="a-h">Phone COD blacklist</h2>
     <p class="text-sm text-neutral-500 mt-1">Blacklisted numbers cannot use full COD<%= s.risk_allow_partial === '1' ? ' (partial COD and prepaid still work)' : ' (prepaid only)' %>. Numbers with past RTOs are restricted automatically by the rule above.</p>
   </div>
-  <form method="post" action="/admin/settings/cod/phones" class="grid md:grid-cols-[200px_1fr_auto] gap-3 items-end">
+  <form method="post" action="/admin/settings/cod/phones" class="grid grid-cols-1 md:grid-cols-[200px_1fr_auto] gap-3 items-end">
     <input type="hidden" name="_csrf" value="<%= csrf %>">
     <div><label class="a-lbl" for="bl-phone">Mobile number</label><input class="a-in" id="bl-phone" name="phone" inputmode="numeric" maxlength="10" required></div>
     <div><label class="a-lbl" for="bl-note">Reason</label><input class="a-in" id="bl-note" name="note" placeholder="e.g. refused 2 COD orders"></div>

@@ -14,3 +14,14 @@ data/orders.json
 # Backups made by npm run images:optimize
 data/image-originals/
 data/backups/
+
+# Ops workspace (agents): customer data and generated reports stay local
+ops/data/*.csv
+!ops/data/settings.csv
+ops/tickets/
+ops/reports/
+ops/confirmations/
+ops/reviews/
+
+# ops helper caches (public pincode data)
+ops/cache/

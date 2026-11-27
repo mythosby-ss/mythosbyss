@@ -43,16 +43,16 @@ router.get('/checkout', needLogin, async (req, res) => {
   const cart = cartLib.hydrate(activeLines(req));
   if (!cart.items.length) return res.redirect('/cart');
   const { discount, code } = await couponFor(req, cart.net);
-  const pricing = Object.fromEntries(Object.keys(METHODS).map((m) => [m, cartLib.priceOrder(cart, m, discount)]));
   const full = await db.one('SELECT * FROM customers WHERE id=?', [res.locals.customer.id]);
   let saved = {}; try { saved = JSON.parse(full.last_address || '{}'); } catch (_) {}
   if (!saved.landmark && saved.line2) saved.landmark = saved.line2; // addresses saved before the separate landmark field
-  const options = await codrules.paymentOptions({ orderValue: cart.net - discount, pincode: saved.pincode, phone: full.phone });
+  const options = await codrules.paymentOptions({ orderValue: cart.net - discount, pincode: saved.pincode, phone: full.phone, items: cart.items });
+  const pricing = Object.fromEntries(Object.keys(METHODS).map((m) => [m, cartLib.priceOrder(cart, m, discount, options.rule.advance)]));
   events.track(req, 'begin_checkout');
   res.render('checkout', {
     pageTitle: 'Checkout | MythosBySS', noindex: true, cart, pricing, methods: METHODS, buyNow, couponCode: code, discount,
-    options: options.methods, selected: codrules.defaultMethod(options.methods), pincodeMessage: options.pincodeMessage,
-    prepaidDiscount: cartLib.prepaidDiscount(), requireLandmark: settings.on('address_require_landmark'),
+    options: options.methods, selected: codrules.defaultMethod(options.methods), pincodeMessage: options.pincodeMessage, payNote: codrules.payNote(options.methods, pricing),
+    prepaidDiscount: cartLib.prepaidDiscount(), requireLandmark: settings.on('address_require_landmark'), languages: LANGUAGES,
     codFee: settings.num('cod_fee'), onlineEnabled: rzp.enabled(), states: STATES, saved, profile: full
   });
 });
@@ -69,10 +69,10 @@ router.post('/checkout/place', needLogin, limiter, async (req, res, next) => {
 
     const { discount, code } = await couponFor(req, cart.net);
     // COD / RTO rules (pincode, order value, phone RTO history, blacklist) are always enforced here, not only in the browser
-    const options = await codrules.paymentOptions({ orderValue: cart.net - discount, pincode: b.pincode, phone: cust.phone });
+    const options = await codrules.paymentOptions({ orderValue: cart.net - discount, pincode: b.pincode, phone: cust.phone, items: cart.items });
     if (!options.serviceable) return res.status(422).json({ ok: false, errors: { pincode: options.pincodeMessage }, message: options.pincodeMessage });
     if (!options.methods[method].ok) return res.status(422).json({ ok: false, message: options.methods[method].reason + ' Please choose another payment method.', options: options.methods });
-    const amounts = cartLib.priceOrder(cart, method, discount);
+    const amounts = cartLib.priceOrder(cart, method, discount, options.rule.advance);
     if (amounts.payNow > 0 && !rzp.enabled()) return res.status(503).json({ ok: false, message: 'Online payment is not available right now. Please try again later.' });
 
     // Reserve stock (bundles reserve their component SKUs). All-or-nothing.
@@ -90,22 +90,25 @@ router.post('/checkout/place', needLogin, limiter, async (req, res, next) => {
     // COD orders wait for a confirmation call/WhatsApp from the admin; prepaid & partial COD are confirmed once paid.
     const offlineStatus = method === 'cod' ? 'pending_confirmation' : 'confirmed';
     await db.run(`INSERT INTO orders(id,customer_id,status,payment_method,payment_status,subtotal,discount,prepaid_discount,offer_discount,fbp,fbc,client_ip,user_agent,coupon_code,shipping_fee,cod_fee,total,pay_now,due_on_delivery,
-      name,email,phone,address,city,state,pincode,note,utm_source,utm_medium,utm_campaign,review_token,created_at,confirmed_at,updated_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      name,email,phone,address,city,state,pincode,note,utm_source,utm_medium,utm_campaign,review_token,created_at,confirmed_at,updated_at,
+      address_line1,address_line2,landmark,preferred_language,utm_content)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [id, cust.id, online ? 'awaiting_payment' : offlineStatus, method, online ? 'pending' : 'cod_pending', amounts.subtotal, amounts.discount + amounts.prepaidDiscount + amounts.offerDiscount, amounts.prepaidDiscount, amounts.offerDiscount, ctx.fbp, ctx.fbc, ctx.ip, ctx.ua, code, amounts.shipping, amounts.codFee, amounts.total, amounts.payNow, amounts.dueOnDelivery,
         t(b.name), t(b.email).toLowerCase(), cust.phone, fullAddress(b), t(b.city), t(b.state), t(b.pincode), t(b.note).slice(0, 300),
-        attr.source || 'direct', attr.medium || '', attr.campaign || '', crypto.randomBytes(12).toString('hex'), now, !online && offlineStatus === 'confirmed' ? now : null, now]);
+        attr.source || 'direct', attr.medium || '', attr.campaign || '', crypto.randomBytes(12).toString('hex'), now, !online && offlineStatus === 'confirmed' ? now : null, now,
+        t(b.house).slice(0, 200), t(b.line1).slice(0, 200), t(b.landmark).slice(0, 200), LANGUAGES.includes(t(b.preferred_language)) ? t(b.preferred_language) : null, attr.content || null]);
     await db.batch([
       ...cart.items.map((i) => ['INSERT INTO order_items(order_id,product_slug,product_name,sku,variant_label,qty,unit_price,cost_price,components) VALUES(?,?,?,?,?,?,?,?,?)',
         [id, i.slug, i.product.name, i.sku, i.variant.label, i.qty, i.unit, i.variant.cost, i.variant.components ? JSON.stringify(i.variant.components.map((c) => ({ sku: c.sku, qty: c.qty, name: c.name, label: c.label }))) : null]]),
       ['INSERT INTO order_events(order_id,status,note,actor,at) VALUES(?,?,?,?,?)', [id, online ? 'awaiting_payment' : offlineStatus, online ? 'Waiting for online payment' : offlineStatus === 'pending_confirmation' ? 'Order placed (cash on delivery) - waiting for confirmation' : 'Order placed', 'customer', now]],
-      ['UPDATE customers SET name=?, email=?, last_address=? WHERE id=?', [t(b.name), t(b.email).toLowerCase(), JSON.stringify({ house: t(b.house), line1: t(b.line1), landmark: t(b.landmark), city: t(b.city), state: t(b.state), pincode: t(b.pincode) }), cust.id]]
+      ['UPDATE customers SET name=?, email=?, last_address=? WHERE id=?', [t(b.name), t(b.email).toLowerCase(), JSON.stringify({ house: t(b.house), line1: t(b.line1), landmark: t(b.landmark), city: t(b.city), state: t(b.state), pincode: t(b.pincode), lang: LANGUAGES.includes(t(b.preferred_language)) ? t(b.preferred_language) : undefined }), cust.id]]
     ].concat(code ? [['UPDATE coupons SET used = used + 1 WHERE code=?', [code]]] : []));
     await catalog.refresh();
     req.session.orders = [...(req.session.orders || []), id];
 
     if (!online) {
       clearActive(req); events.track(req, 'purchase'); // first-party funnel step "order placed" (not sent to Meta)
+      require('../lib/owner-mail').newOrder(id); // owner email, sent in the background after this response
       // COD: confirmation message + conversion events are sent when the admin confirms the order (lib/notify onStatus)
       if (offlineStatus === 'confirmed') notify.onConfirmed(id).catch((e) => console.error(e.message));
       else if (capi.metaReady()) orders.getOrder(id).then((o) => capi.codPlaced(o)).catch((e) => console.error('[capi] COD_Placed', e.message)); // not a Purchase
@@ -144,11 +147,14 @@ router.get('/checkout/options', needLogin, async (req, res, next) => {
   try {
     const cart = cartLib.hydrate(activeLines(req));
     const { discount } = await couponFor(req, cart.net);
-    const o = await codrules.paymentOptions({ orderValue: cart.net - discount, pincode: String(req.query.pincode || ''), phone: res.locals.customer.phone });
-    res.json({ ok: true, serviceable: o.serviceable, pincodeMessage: o.pincodeMessage, methods: o.methods, selected: codrules.defaultMethod(o.methods) });
+    const o = await codrules.paymentOptions({ orderValue: cart.net - discount, pincode: String(req.query.pincode || ''), phone: res.locals.customer.phone, items: cart.items });
+    const pricing = Object.fromEntries(Object.keys(METHODS).map((m) => [m, cartLib.priceOrder(cart, m, discount, o.rule.advance)]));
+    res.json({ ok: true, serviceable: o.serviceable, pincodeMessage: o.pincodeMessage, methods: o.methods, selected: codrules.defaultMethod(o.methods), payNote: codrules.payNote(o.methods, pricing) });
   } catch (e) { next(e); }
 });
 
+// Optional "Preferred language" at checkout (used by the ops agents for confirmation / review messages)
+const LANGUAGES = ['English', 'Hindi', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 'Marathi', 'Gujarati', 'Bengali', 'Punjabi', 'Odia'];
 const fullAddress = (b) => { const t = (v) => String(v || '').trim(); return [t(b.house), t(b.line1), t(b.landmark) && 'Landmark: ' + t(b.landmark)].filter(Boolean).join(', '); };
 
 function clearActive(req) { if (req.body.mode === 'buynow') req.session.buyNow = null; else { req.session.cart = []; req.session.coupon = null; } }

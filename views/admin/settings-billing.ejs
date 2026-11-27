@@ -5,7 +5,7 @@
     <h2 class="a-h">Billing details</h2>
     <p class="text-sm text-neutral-500 mt-1">Printed as the seller on every tax invoice and shipping label. The state decides CGST + SGST (same state) or IGST (other states).</p>
   </div>
-  <div class="grid md:grid-cols-2 gap-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div class="md:col-span-2">
       <label class="a-lbl" for="biz_gstin">GSTIN</label>
       <div class="flex gap-2">
@@ -29,7 +29,7 @@
 
   <div class="border-t border-neutral-100 pt-5">
     <h2 class="a-h">Invoice</h2>
-    <div class="grid md:grid-cols-3 gap-4 mt-3">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
       <div><label class="a-lbl" for="invoice_prefix">Invoice number prefix</label><input class="a-in font-mono" id="invoice_prefix" name="invoice_prefix" value="<%= s.invoice_prefix || 'MBSS-' %>"><p class="text-xs text-neutral-400 mt-1">Invoice no. = prefix + order ID</p></div>
       <div><label class="a-lbl" for="biz_hsn">Default HSN code</label><input class="a-in font-mono" id="biz_hsn" name="biz_hsn" maxlength="8" value="<%= s.biz_hsn || '' %>" placeholder="4–8 digits (optional)"></div>
       <div><label class="a-lbl">GST rate</label><p class="py-2 text-sm"><b><%= s.gst_percent %>%</b> <a class="text-adm-blue text-xs ml-1" href="/admin/settings">change</a></p></div>

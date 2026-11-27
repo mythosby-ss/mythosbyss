@@ -8,11 +8,11 @@
   <% list.forEach((c) => { %><tr><td><b><%= c.name %></b><br><%- pill(c.status) %> <% if (c.product_slug) { %><span class="text-xs text-neutral-500"><%= c.product_slug %></span><% } %></td><td><%= c.platform %></td><td class="text-xs"><%= c.utm_campaign %></td><td><%= money(c.spend) %></td><td><%= c.imp %></td><td><%= c.clicks %></td><td><%= c.ctr %>%</td><td><%= money(c.cpc) %></td><td><%= c.orders %></td><td><%= money(c.revenue) %></td><td><%= c.orders ? money(c.cpa) : '-' %></td><td><b class="<%= c.roas >= 2 ? 'text-green-700' : c.spend ? 'text-red-600' : '' %>"><%= c.spend ? c.roas + 'x' : '-' %></b></td>
     <td><form method="post" action="/admin/marketing/campaigns/<%= c.id %>/delete" data-confirm="Delete this campaign and its metrics?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-r !py-1">Delete</button></form></td></tr><% }) %>
   <% if (!list.length) { %><tr><td colspan="13" class="text-center py-8 text-neutral-500">No campaigns yet. Create one below.</td></tr><% } %></tbody></table></section>
-<div class="grid lg:grid-cols-2 gap-4">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
   <section class="a-card overflow-x-auto"><h2 class="a-h p-5 pb-3">Product-wise performance (from ad-attributed orders)</h2><table class="a-table"><thead><tr><th>Product</th><th>Units</th><th>Revenue</th><th>Allocated spend</th><th>ROAS</th></tr></thead><tbody><% productWise.forEach((p) => { %><tr><td><%= p.name %></td><td><%= p.units %></td><td><%= money(p.revenue) %></td><td><%= p.spend ? money(p.spend) : '-' %></td><td><%= p.roas ? p.roas + 'x' : '-' %></td></tr><% }) %><% if (!productWise.length) { %><tr><td colspan="5" class="text-neutral-500 text-center py-6">No attributed orders yet.</td></tr><% } %></tbody></table></section>
   <section class="a-card p-5"><h2 class="a-h mb-3">Daily spend</h2><%- include('partials/bars', { labels: daily.map((x) => x.day.slice(8) + '/' + x.day.slice(5, 7)), a: daily.map((x) => x.spend), b: daily.map((x) => x.clicks), aName: 'Spend (INR)', bName: 'Clicks', money: false }) %></section>
 </div>
-<div class="grid lg:grid-cols-3 gap-4">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
   <section class="a-card p-5"><h2 class="a-h mb-3">New campaign</h2>
     <form method="post" action="/admin/marketing/campaigns/save" class="space-y-3"><input type="hidden" name="_csrf" value="<%= csrf %>">
       <div><label class="a-lbl">Name</label><input class="a-in" name="name" required></div>

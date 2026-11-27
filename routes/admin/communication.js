@@ -31,10 +31,16 @@ router.post('/communication/test', async (req, res) => {
 });
 router.post('/communication/run-queue', async (req, res) => { await notify.processQueue(); res.flash('Scheduled messages processed.'); res.redirect('/admin/communication'); });
 
-const FIELDS = ['store_name', 'announcement', 'support_email', 'shipping_fee', 'gst_percent', 'pg_fee_percent', 'review_delay_hours', 'home_state', 'low_stock_default'];
+const FIELDS = ['store_name', 'announcement', 'support_email', 'shipping_fee', 'gst_percent', 'pg_fee_percent', 'review_delay_hours', 'home_state', 'low_stock_default', 'new_arrivals_min', 'new_arrivals_max', 'new_arrivals_days', 'new_arrivals_banner', 'new_arrivals_banner_sub'];
+const NUM = { new_arrivals_min: [1, 24], new_arrivals_max: [1, 48], new_arrivals_days: [7, 365] };
 router.get('/settings', (req, res) => res.render('admin/settings', { title: 'Settings', s: settings.all() }));
 router.post('/settings', async (req, res) => {
-  for (const k of FIELDS) if (req.body[k] !== undefined) await settings.set(k, String(req.body[k]).trim().slice(0, 200));
+  for (const k of FIELDS) {
+    if (req.body[k] === undefined) continue;
+    let v = String(req.body[k]).trim().slice(0, 200);
+    if (NUM[k]) { const n = Math.round(Number(v)); v = String(Number.isFinite(n) ? Math.min(NUM[k][1], Math.max(NUM[k][0], n)) : settings.get(k)); }
+    await settings.set(k, v);
+  }
   res.flash('Settings saved.'); res.redirect('/admin/settings');
 });
 module.exports = router;

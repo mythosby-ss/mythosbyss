@@ -10,33 +10,33 @@
 
   <div class="kpi relative overflow-hidden">
     <div class="absolute inset-0 bg-gradient-to-br from-adm-blue/5 to-adm-blue/10 rounded-xl pointer-events-none"></div>
-    <b class="text-2xl text-adm-blue"><%= today.orders || 0 %></b>
-    <span>Orders today</span>
-    <p class="text-xs text-neutral-400 mt-1">Revenue: <%= money(today.revenue || 0) %></p>
+    <b class="relative text-2xl text-adm-blue"><%= today.orders || 0 %></b>
+    <span class="relative">Orders today</span>
+    <p class="relative text-xs text-neutral-500 mt-1">Revenue: <%= money(today.revenue || 0) %></p>
   </div>
 
   <div class="kpi relative overflow-hidden">
-    <a href="/admin/orders" class="absolute inset-0 rounded-xl"></a>
+    <a href="/admin/orders" class="absolute inset-0 rounded-xl z-10" aria-label="Open"></a>
     <div class="absolute inset-0 bg-gradient-to-br from-amber-50 to-amber-100/60 rounded-xl pointer-events-none"></div>
-    <b class="text-2xl <%= pending > 0 ? 'text-amber-600' : '' %>"><%= pending %></b>
-    <span>Orders to dispatch</span>
-    <p class="text-xs text-neutral-400 mt-1">Tap to process →</p>
+    <b class="relative text-2xl <%= pending > 0 ? 'text-amber-600' : '' %>"><%= pending %></b>
+    <span class="relative">Orders to dispatch</span>
+    <p class="relative text-xs text-neutral-500 mt-1">Tap to process →</p>
   </div>
 
   <div class="kpi relative overflow-hidden">
-    <a href="/admin/inventory?f=low" class="absolute inset-0 rounded-xl"></a>
+    <a href="/admin/inventory?f=low" class="absolute inset-0 rounded-xl z-10" aria-label="Open"></a>
     <div class="absolute inset-0 bg-gradient-to-br from-red-50 to-red-100/50 rounded-xl pointer-events-none"></div>
-    <b class="text-2xl <%= lowStock > 0 ? '!text-red-600' : '' %>"><%= lowStock %></b>
-    <span>Low / out-of-stock SKUs</span>
-    <p class="text-xs text-neutral-400 mt-1"><%= lowStock > 0 ? 'Action needed' : 'All good' %></p>
+    <b class="relative text-2xl <%= lowStock > 0 ? '!text-red-600' : '' %>"><%= lowStock %></b>
+    <span class="relative">Low / out-of-stock SKUs</span>
+    <p class="relative text-xs text-neutral-500 mt-1"><%= lowStock > 0 ? 'Action needed' : 'All good' %></p>
   </div>
 
   <div class="kpi relative overflow-hidden">
-    <a href="/admin/customers" class="absolute inset-0 rounded-xl"></a>
+    <a href="/admin/customers" class="absolute inset-0 rounded-xl z-10" aria-label="Open"></a>
     <div class="absolute inset-0 bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl pointer-events-none"></div>
-    <b class="text-2xl text-green-600"><%= money(monthSales || 0) %></b>
-    <span>This month's revenue</span>
-    <p class="text-xs text-neutral-400 mt-1"><%= monthOrders || 0 %> confirmed orders</p>
+    <b class="relative text-2xl text-green-600"><%= money(monthSales || 0) %></b>
+    <span class="relative">This month's revenue</span>
+    <p class="relative text-xs text-neutral-500 mt-1"><%= monthOrders || 0 %> confirmed orders</p>
   </div>
 </div>
 
@@ -64,7 +64,7 @@
     <% } else if (!c.connected) { %><p class="text-xs text-neutral-500">Connect <a class="text-adm-blue hover:underline" href="/admin/plugins#<%= c.platform === 'meta' ? 'metaads' : 'googleads' %>"><%= name %> in Plugins</a> to show live spend.<%= c.hasManual ? ' Showing spend entered under Performance marketing.' : '' %></p><% } %>
   </section>
 <% } %>
-<div class="grid lg:grid-cols-2 gap-4">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
   <% adCard(metaCard, 'Meta', '<svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="#0866ff" stroke-width="2.2" stroke-linecap="round"><path d="M3 15c0-4 2-8 4.5-8 3 0 6 10 9 10 2 0 4.5-1.5 4.5-5S19 7 16.5 7c-3 0-6 10-9 10C5 17 3 16.5 3 15z"/></svg>'); %>
   <% adCard(googleCard, 'Google Ads', '<svg class="w-6 h-6" viewBox="0 0 24 24"><path d="M9.5 4.5l-6 10.4a3 3 0 105.2 3l6-10.4z" fill="#fbbc04"/><path d="M14.5 4.5a3 3 0 00-5.2 3l6 10.4a3 3 0 105.2-3z" fill="#4285f4"/><circle cx="6.1" cy="16.4" r="3" fill="#34a853"/></svg>'); %>
 </div>
@@ -114,7 +114,7 @@
 </section>
 
 <!-- ═══════════════════ PENDING ITEMS + QUICK ACTIONS ═══════════════════ -->
-<div class="grid lg:grid-cols-2 gap-4">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
   <!-- Pending Items -->
   <section class="a-card p-5">
@@ -184,7 +184,7 @@
 </div>
 
 <!-- ═══════════════════ ORDER TREND CHART ═══════════════════ -->
-<div class="grid lg:grid-cols-2 gap-4">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
   <section class="a-card p-5">
     <h2 class="a-h mb-1">Order Trend (Last 7 Days)</h2>
     <p class="text-xs text-neutral-400 mb-4">Daily confirmed vs placed orders</p>
@@ -268,7 +268,7 @@
 </section>
 
 <!-- ═══════════════════ REPEAT ORDERS + TOP PRODUCTS ═══════════════════ -->
-<div class="grid lg:grid-cols-2 gap-4">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
   <!-- Top Products This Month -->
   <section class="a-card p-5">
@@ -337,7 +337,7 @@
 </div>
 
 <!-- ═══════════════════ CUSTOMER INSIGHTS ═══════════════════ -->
-<div class="grid lg:grid-cols-3 gap-4">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
   <section class="a-card p-5">
     <h2 class="a-h mb-4">Customer Rating</h2>
     <div class="text-center py-2">

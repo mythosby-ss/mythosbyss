@@ -1,0 +1,61 @@
+<%- include('partials/top') %>
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-5 max-w-6xl">
+  <form method="post" action="/admin/settings/ops" class="a-card p-5 space-y-4">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div>
+      <h2 class="a-h">Owner emails</h2>
+      <p class="text-sm text-neutral-500 mt-1">Emails to you (not to customers). They are sent in the background and never slow down checkout.</p>
+    </div>
+    <p class="text-sm rounded-lg p-3 <%= smtp ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-amber-50 border border-amber-200 text-amber-800' %>">
+      <%= smtp ? 'Email sending is set up (SMTP in .env). Use "Send a test email" to check the login works.' : 'Email sending is not set up yet: fill SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and SMTP_FROM in .env, then restart the app.' %>
+    </p>
+    <% if (s.owner_email_new_order !== '1') { %><p class="text-sm rounded-lg p-3 bg-amber-50 border border-amber-200 text-amber-800"><b>New order email is OFF.</b> Tick it below and Save, or no order emails are sent.</p><% } %>
+    <div>
+      <label class="a-lbl" for="owner_email">Send to</label>
+      <input class="a-in" id="owner_email" name="owner_email" type="email" value="<%= s.owner_email || '' %>" placeholder="<%= to || 'you@example.com' %>">
+      <p class="text-xs text-neutral-400 mt-1">Empty = OWNER_EMAIL from .env, else owner_email in ops/data/settings.csv. Now: <b><%= to || 'not set' %></b></p>
+    </div>
+    <label class="flex items-start gap-2 text-sm"><input type="checkbox" class="mt-0.5" name="owner_email_new_order" value="1" <%= s.owner_email_new_order === '1' ? 'checked' : '' %>>
+      <span><b>New order email</b> – the moment an order is placed (COD) or paid (prepaid / partial COD advance). Shows the products, total, payment type, city + pincode and an admin link. No customer phone or address.</span></label>
+    <label class="flex items-start gap-2 text-sm"><input type="checkbox" class="mt-0.5" name="owner_email_daily" value="1" <%= s.owner_email_daily === '1' ? 'checked' : '' %>>
+      <span><b>Daily report</b> – orders, delivered, RTO and return losses, pending confirmation, in transit and ad spend.</span></label>
+    <div class="max-w-[10rem]">
+      <label class="a-lbl" for="daily_report_time">Daily report time (India)</label>
+      <input class="a-in" id="daily_report_time" name="daily_report_time" type="time" value="<%= s.daily_report_time || '22:00' %>">
+    </div>
+    <p class="text-xs text-neutral-400">The report is sent once a day by the website itself. If the site was asleep or restarting at that time, it goes out as soon as it is back the same day.<% if (cron) { %> An external cron trigger is also enabled (CRON_SECRET).<% } %></p>
+    <button class="a-btn px-6 py-3">Save</button>
+  </form>
+
+  <div class="space-y-5">
+    <section class="a-card p-5">
+      <h2 class="a-h">Send a test email</h2>
+      <p class="text-sm text-neutral-500 mt-1">Works even while the switches are off, so you can check before turning them on. Subjects start with [TEST].</p>
+      <div class="flex flex-wrap gap-2 mt-3">
+        <form method="post" action="/admin/settings/ops/test/order"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-o">Test new-order email (latest order)</button></form>
+        <form method="post" action="/admin/settings/ops/test/daily"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-o">Test daily report (today)</button></form>
+      </div>
+    </section>
+
+    <section class="a-card p-5">
+      <h2 class="a-h">Export ops data</h2>
+      <p class="text-sm text-neutral-500 mt-1">CSV files for the Claude Code ops agents. Save them into <code>ops/data/</code> in your project (same as <code>npm run ops:export</code>). Last 180 days. Contains customer phone numbers and addresses: keep them private.</p>
+      <div class="flex flex-wrap gap-2 mt-3">
+        <% exportNames.forEach((n) => { %><a class="a-btn-o" href="/admin/ops/export/<%= n %>.csv"><%= n %>.csv</a><% }) %>
+      </div>
+      <p class="text-xs text-neutral-400 mt-2">shipments.csv is built from the courier, AWB, NDR and charges saved on each order until Shipway is connected.</p>
+    </section>
+
+    <section class="a-card p-5">
+      <h2 class="a-h">Recent owner emails</h2>
+      <% if (!logs.length) { %><p class="text-sm text-neutral-500 mt-2">Nothing sent yet.</p><% } else { %>
+      <div class="overflow-x-auto mt-2"><table class="w-full text-sm">
+        <thead><tr class="text-left text-neutral-500"><th class="py-1.5 pr-3">When</th><th class="pr-3">Email</th><th class="pr-3">Status</th></tr></thead>
+        <tbody><% logs.forEach((l) => { let p = {}; try { p = JSON.parse(l.payload || '{}'); } catch (_) {} %>
+          <tr class="border-t border-neutral-100 align-top"><td class="py-1.5 pr-3 whitespace-nowrap"><%= dt(l.created_at) %></td><td class="pr-3"><%= p.subject || l.template %></td>
+            <td class="pr-3"><%- pill(l.status) %><% if (l.error) { %><p class="text-xs text-red-600 mt-1"><%= l.error %></p><% } %></td></tr><% }) %></tbody>
+      </table></div><% } %>
+    </section>
+  </div>
+</div>
+<%- include('partials/bottom') %>

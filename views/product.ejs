@@ -8,7 +8,7 @@
 </div>
 
 <section class="container-x py-8 grid lg:grid-cols-2 gap-10 lg:gap-16"
-  data-product
+  data-product data-slug="<%= product.slug %>"
   data-product-images="<%= JSON.stringify(product.images.map(disp)) %>"
   data-variants="<%= JSON.stringify(product.variants.map(v => ({ sku: v.sku, price: v.price, mrp: v.mrp, label: v.label, code: v.code, pack: v.pack, stock: v.stock, images: v.images.map(disp) }))) %>">
   <!-- Gallery -->
@@ -94,6 +94,7 @@
     <ul class="mt-6 grid grid-cols-2 gap-3 text-sm text-neutral-700">
       <li class="flex gap-2"><span class="text-gold">&#10003;</span> BPA free, food grade</li>
       <% if (offers.codEnabled) { %><li class="flex gap-2"><span class="text-gold">&#10003;</span> Cash on delivery available</li><% } %>
+      <% if (offers.onlineOnly) { %><li class="col-span-2 flex gap-2 text-amber-800"><span>&#9432;</span> <%= offers.onlineOnly %></li><% } %>
       <% if (offers.partialEnabled) { %><li class="flex gap-2"><span class="text-gold">&#10003;</span> Partial COD: pay <%= offers.partialText %> now, rest on delivery</li><% } %>
       <% if (offers.prepaidDiscount) { %><li class="flex gap-2"><span class="text-gold">&#10003;</span> Extra <%= money(offers.prepaidDiscount) %> off on online payment</li><% } %>
       <li class="flex gap-2"><span class="text-gold">&#10003;</span> 7-day damage replacement</li>
@@ -101,18 +102,18 @@
   </div>
 </section>
 
-<% if (addons.length) { const mainV = initial; const fbtTotal = mainV.price + addons.reduce((s, a) => s + defaultVariant(a).price, 0); %>
+<% if (addons.length) { const fbtTotal = addons.reduce((s, a) => s + defaultVariant(a).price, 0); %>
 <section class="container-x pt-6" aria-labelledby="fbt-h">
   <form method="post" action="/cart/add-many" class="border border-neutral-200 rounded-2xl p-5" data-fbt>
     <input type="hidden" name="_csrf" value="<%= csrf %>">
     <h2 id="fbt-h" class="text-2xl font-semibold">Frequently bought together</h2>
+    <p class="text-sm text-neutral-600 mt-1">Goes well with <%= product.name %></p>
     <div class="mt-4 grid sm:grid-cols-[1fr_auto] gap-6 items-center">
       <ul class="space-y-3">
-        <li><label class="flex items-center gap-3 text-sm"><input type="checkbox" name="add" value="<%= product.slug %>:<%= mainV.sku %>" data-price="<%= mainV.price %>" data-fbt-main checked class="accent-[#b07a2a]">
-          <img src="<%= product.image %>" alt="" class="w-12 h-12 rounded-lg object-cover bg-paper" loading="lazy"><span class="flex-1"><b>This item:</b> <%= product.name %></span><b><%= money(mainV.price) %></b></label></li>
         <% addons.forEach((a) => { const v = defaultVariant(a); %>
-        <li><label class="flex items-center gap-3 text-sm"><input type="checkbox" name="add" value="<%= a.slug %>:<%= v.sku %>" data-price="<%= v.price %>" checked class="accent-[#b07a2a]">
-          <img src="<%= a.image %>" alt="" class="w-12 h-12 rounded-lg object-cover bg-paper" loading="lazy"><a href="/products/<%= a.slug %>" class="flex-1 hover:underline"><%= a.name %><%= a.multi ? ' (' + v.label + ')' : '' %></a><b><%= money(v.price) %></b></label></li>
+        <li class="flex items-center gap-3 text-sm"><input type="checkbox" id="fbt-<%= a.slug %>" name="add" value="<%= a.slug %>:<%= v.sku %>" data-price="<%= v.price %>" checked class="accent-[#b07a2a] w-4 h-4 shrink-0" aria-label="Add <%= a.name %>">
+          <label for="fbt-<%= a.slug %>" class="shrink-0"><img src="<%= a.image %>" alt="" class="w-12 h-12 rounded-lg object-cover bg-paper" loading="lazy"></label>
+          <a href="/products/<%= a.slug %>" class="flex-1 hover:underline"><%= a.name %><%= a.multi ? ' (' + v.label + ')' : '' %></a><b><%= money(v.price) %></b></li>
         <% }) %>
       </ul>
       <div class="text-center sm:text-right">

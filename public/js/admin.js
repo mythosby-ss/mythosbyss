@@ -91,4 +91,14 @@
     gstForm.querySelector('[data-gst-fill]').addEventListener('click', () => fill(true));
     gstForm.biz_gstin.addEventListener('change', () => fill(false));
   }
+
+  // Product form: live chargeable weight = max(dead weight, L x B x H / 5000)
+  const wBox = document.querySelector('[data-weight]'); const wOut = document.querySelector('[data-chargeable]');
+  if (wBox && wOut) {
+    const v = (n) => Number((wBox.querySelector('[name="' + n + '"]') || {}).value) || 0;
+    wBox.addEventListener('input', () => {
+      const vol = v('length_cm') * v('breadth_cm') * v('height_cm') / 5000; const w = Math.round(Math.max(v('weight_kg'), vol) * 100) / 100;
+      wOut.textContent = w > 0 ? w + ' kg' + (vol > v('weight_kg') ? ' (by box size)' : '') : 'not set (default weight is used)';
+    });
+  }
 })();

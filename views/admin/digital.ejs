@@ -1,5 +1,5 @@
 <%- include('partials/top') %>
-<div class="grid xl:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
   <section class="a-card xl:col-span-2"><h2 class="a-h p-5 pb-3">Promotional banners (home page carousel)</h2>
     <div class="divide-y"><% banners.forEach((b) => { %><div class="p-4 flex gap-4 items-center flex-wrap"><% if (b.image) { %><img src="<%= imgUrl(b.image) %>" class="w-24 h-16 object-cover rounded bg-neutral-100" alt=""><% } else { %><span class="w-24 h-16 rounded flex items-center justify-center text-xs text-white <%= b.theme === 'ink' ? 'bg-neutral-800' : b.theme === 'gold' ? 'bg-gold' : 'bg-lilac' %>"><%= b.theme %></span><% } %>
       <div class="flex-1 min-w-[200px]"><b><%= b.title %></b> <%- b.active ? pill('Active', 'green') : pill('Off', 'gray') %><p class="text-xs text-neutral-500"><%= b.subtitle %></p><p class="text-xs text-neutral-500">Link: <%= b.link %> &middot; <%= b.starts_on || 'any time' %> to <%= b.ends_on || 'no end' %></p></div>
@@ -15,7 +15,7 @@
       <button class="a-btn w-full">Save banner</button><% if (editB) { %><a class="a-btn-o w-full" href="/admin/marketing/digital">Cancel</a><% } %></form></section>
 </div>
 
-<div class="grid xl:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
   <section class="a-card xl:col-span-2 overflow-x-auto"><h2 class="a-h p-5 pb-3">Offers &amp; promotional activity</h2>
     <table class="a-table min-w-[760px]"><thead><tr><th>Promotion</th><th>Channel</th><th>Coupon</th><th>Dates</th><th>Status</th><th>Tracking link</th><th></th></tr></thead><tbody>
       <% promos.forEach((p) => { %><tr><td><b><%= p.name %></b><p class="text-xs text-neutral-500 max-w-[260px]"><%= p.content %></p></td><td><%= p.channel %></td><td><%= p.coupon_code || '-' %></td><td class="text-xs"><%= p.starts_on || '-' %><br><%= p.ends_on || '' %></td><td><%- pill(p.status, p.status === 'live' ? 'green' : p.status === 'ended' ? 'gray' : 'blue') %></td><td><button type="button" class="a-btn-o !py-1" data-copy="<%= p.link %>">Copy link</button></td>

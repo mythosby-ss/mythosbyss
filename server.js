@@ -158,6 +158,15 @@ app.use('/', require('./routes/shop'));
 app.use('/cart', require('./routes/cart'));
 app.use('/', require('./routes/checkout'));
 app.use('/admin', require('./routes/admin'));
+// Optional external trigger for the daily owner report (e.g. a Hostinger cron job: curl -H "x-cron-key: $CRON_SECRET" https://.../cron/daily-report).
+// It runs the same once-per-day check as the built-in scheduler, so it never sends twice.
+app.get('/cron/daily-report', async (req, res) => {
+  const key = process.env.CRON_SECRET;
+  if (!key) return res.status(503).json({ ok: false });
+  if (!require('./lib/orders').safeEqual(req.get('x-cron-key') || '', key)) return res.status(403).json({ ok: false });
+  const r = await require('./lib/owner-mail').tick().catch((e) => ({ ok: false, error: e.message }));
+  res.json({ ok: Boolean(r && r.ok), skipped: r && r.skipped, error: r && r.error });
+});
 
 app.use(require('./lib/redirects').middleware); // saved 301s + old Shopdeck URLs
 app.use((req, res) => res.status(404).render('404', { pageTitle: 'Page not found' }));
@@ -174,5 +183,6 @@ async function start() {
   await catalog.refresh();
   app.listen(PORT, () => console.log(`MythosBySS running on http://localhost:${PORT}`));
   notify.startScheduler(); // every minute: send due review requests, cancel unpaid online orders after 45 min
+  require('./lib/owner-mail').startScheduler(); // every minute: daily owner report at daily_report_time (IST), once per day
 }
 start().catch((err) => { console.error('Failed to start server:', err); process.exit(1); });

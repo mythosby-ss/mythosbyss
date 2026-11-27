@@ -13,6 +13,18 @@
     <label class="flex items-center gap-2 pt-6 text-sm"><input type="checkbox" name="is_new" value="1" <%= p && p.isNew ? 'checked' : '' %>> Show in New arrivals</label>
     <div><label class="a-lbl" for="packaging_cost">Packaging cost per order (₹, for profit)</label><input class="a-in" id="packaging_cost" type="number" min="0" step="0.01" name="packaging_cost" value="<%= p && p.packagingCost != null ? p.packagingCost : '' %>" placeholder="Default from Profit &amp; RTO settings"></div>
     <div><label class="a-lbl" for="shipping_cost">Forward shipping cost (₹, for profit)</label><input class="a-in" id="shipping_cost" type="number" min="0" step="0.01" name="shipping_cost" value="<%= p && p.shippingCost != null ? p.shippingCost : '' %>" placeholder="Default from Profit &amp; RTO settings"></div>
+    <%# Payment rules by weight (Admin > Settings > COD & RTO rules). Chargeable weight = max(dead weight, L x B x H / 5000) %>
+    <div class="md:col-span-2 border-t border-neutral-100 pt-4"><p class="font-semibold text-sm">Weight &amp; payment</p><p class="text-xs text-neutral-500">Packed weight and box size for one unit. Used for the COD / prepaid rules at checkout. Leave empty to use the default weight (<%= defaultWeight %> kg).</p></div>
+    <div class="md:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3" data-weight>
+      <div><label class="a-lbl" for="weight_kg">Dead weight (kg)</label><input class="a-in" id="weight_kg" type="number" min="0" step="0.01" name="weight_kg" value="<%= p && p.weightKg != null ? p.weightKg : '' %>"></div>
+      <div><label class="a-lbl" for="length_cm">Length (cm)</label><input class="a-in" id="length_cm" type="number" min="0" step="0.1" name="length_cm" value="<%= p && p.lengthCm != null ? p.lengthCm : '' %>"></div>
+      <div><label class="a-lbl" for="breadth_cm">Breadth (cm)</label><input class="a-in" id="breadth_cm" type="number" min="0" step="0.1" name="breadth_cm" value="<%= p && p.breadthCm != null ? p.breadthCm : '' %>"></div>
+      <div><label class="a-lbl" for="height_cm">Height (cm)</label><input class="a-in" id="height_cm" type="number" min="0" step="0.1" name="height_cm" value="<%= p && p.heightCm != null ? p.heightCm : '' %>"></div>
+    </div>
+    <p class="md:col-span-2 text-sm">Chargeable weight: <b data-chargeable><%= p && p.chargeableWeight ? p.chargeableWeight + ' kg' : 'not set (default ' + defaultWeight + ' kg)' %></b> <span class="text-xs text-neutral-500">= higher of dead weight and L × B × H ÷ 5000</span></p>
+    <div><label class="a-lbl" for="payment_mode_override">Payment mode</label><select class="a-in" id="payment_mode_override" name="payment_mode_override">
+      <option value="auto" <%= !p || p.paymentMode !== 'prepaid_only' ? 'selected' : '' %>>Auto (follow the cart rules)</option>
+      <option value="prepaid_only" <%= p && p.paymentMode === 'prepaid_only' ? 'selected' : '' %>>Prepaid only (no COD / partial COD)</option></select></div>
   </section>
 
   <section class="a-card p-5">
@@ -58,7 +70,7 @@
     <% p.rawImages.forEach((raw, i) => { %><div class="w-36"><img src="<%= imgUrl(raw) %>" alt="" class="w-36 h-36 object-cover rounded-lg border bg-neutral-100"><div class="flex gap-1 mt-1"><% if (i) { %><form method="post" action="/admin/catalogue/<%= p.id %>/images/<%= i %>/primary"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-o !px-2 !py-1 text-xs">Make main</button></form><% } else { %><span class="pill pill-green">Main</span><% } %><form method="post" action="/admin/catalogue/<%= p.id %>/images/<%= i %>/remove"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="a-btn-r !px-2 !py-1 text-xs">Remove</button></form></div></div><% }) %>
     <% if (!p.rawImages.length) { %><p class="text-sm text-amber-700">No images yet.</p><% } %>
   </div>
-  <form method="post" action="/admin/catalogue/<%= p.id %>/images" enctype="multipart/form-data" class="grid md:grid-cols-2 gap-4 items-end">
+  <form method="post" action="/admin/catalogue/<%= p.id %>/images" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
     <input type="hidden" name="_csrf" value="<%= csrf %>">
     <div><label class="a-lbl" for="files">Upload images (JPG, PNG, WEBP, max 5 MB each)</label><input class="a-in" id="files" type="file" name="files" accept="image/jpeg,image/png,image/webp" multiple></div>
     <div><label class="a-lbl" for="link">...or paste a Google Drive image file link (set to "Anyone with the link")</label><input class="a-in" id="link" name="link" placeholder="https://drive.google.com/file/d/FILE_ID/view"></div>
@@ -91,7 +103,7 @@
         <% }) %>
         <% if (!variant.rawImages.length) { %><p class="text-sm text-amber-700">No variant-specific images; product images are used on the store.</p><% } %>
       </div>
-      <form method="post" action="/admin/catalogue/<%= p.id %>/variants/<%= variant.id %>/images" enctype="multipart/form-data" class="grid md:grid-cols-2 gap-3 items-end mt-4">
+      <form method="post" action="/admin/catalogue/<%= p.id %>/variants/<%= variant.id %>/images" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end mt-4">
         <input type="hidden" name="_csrf" value="<%= csrf %>">
         <div><label class="a-lbl" for="variant-files-<%= variant.id %>">Upload variant images (JPG, PNG, WEBP)</label><input class="a-in" id="variant-files-<%= variant.id %>" type="file" name="files" accept="image/jpeg,image/png,image/webp" multiple></div>
         <div><label class="a-lbl" for="variant-link-<%= variant.id %>">Or paste a public image link</label><input class="a-in" id="variant-link-<%= variant.id %>" name="link" placeholder="Drive image file link or HTTPS URL"></div>

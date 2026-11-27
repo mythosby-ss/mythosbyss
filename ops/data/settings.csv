@@ -1,0 +1,15 @@
+key,value
+gst_rate,0.18
+target_margin_of_cost,0.8
+max_rto_pct,0.25
+daily_ad_budget,500
+logistics_partner,Shipway
+logistics_escalation_email,
+logistics_kam_name,
+cod_remittance_days,
+allow_auto_send,no
+owner_email,
+daily_report_time,22:00
+timezone,Asia/Kolkata
+confirmation_timeout_hours,24
+review_link,

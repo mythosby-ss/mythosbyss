@@ -27,7 +27,7 @@ router.use((req, res, next) => {
   next();
 });
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const SC = { ndr: 'red', awaiting_payment: 'amber', pending_confirmation: 'purple', confirmed: 'blue', packed: 'blue', shipped: 'blue', out_for_delivery: 'amber', delivered: 'green', cancelled: 'red', rto: 'red', paid: 'green', advance_paid: 'amber', cod_pending: 'gray', cod_collected: 'green', pending: 'amber', failed: 'red', refunded: 'red', partially_refunded: 'amber', sent: 'blue', delivered_wa: 'green', read: 'green', simulated: 'gray', scheduled: 'amber', published: 'green', draft: 'gray', approved: 'green', rejected: 'red', active: 'green', paused: 'gray' };
+const SC = { ndr: 'red', awaiting_payment: 'amber', pending_confirmation: 'purple', confirmed: 'blue', packed: 'blue', shipped: 'blue', out_for_delivery: 'amber', delivered: 'green', cancelled: 'red', rto: 'red', returned: 'red', paid: 'green', advance_paid: 'amber', cod_pending: 'gray', cod_collected: 'green', pending: 'amber', failed: 'red', refunded: 'red', partially_refunded: 'amber', sent: 'blue', delivered_wa: 'green', read: 'green', simulated: 'gray', scheduled: 'amber', published: 'green', draft: 'gray', approved: 'green', rejected: 'red', active: 'green', paused: 'gray' };
 router.use((req, res, next) => {
   res.locals.esc = esc;
   res.locals.pill = (t, c) => `<span class="pill pill-${c || SC[t] || 'gray'}">${esc(String(t).replace(/_/g, ' '))}</span>`;
@@ -54,6 +54,7 @@ router.use('/', require('./communication'));
 router.use('/', require('./plugins'));
 router.use('/', require('./settings'));
 router.use('/', require('./cod'));
+router.use('/', require('./ops'));
 router.use('/', require('./offers'));
 router.use('/', require('./profit'));
 router.use('/', require('./pages'));

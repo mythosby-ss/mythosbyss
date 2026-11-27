@@ -1,0 +1,25 @@
+awb,order_id,courier,status,last_status_date,attempts,ndr_reason,forward_charge,rto_charge,cod_charge,reverse_pickup_charge,weight_charged_kg
+DLV9000000,MBS0001,Delhivery,delivered,2026-11-14,1,,130,0,60,0,5.2
+XB9000137,MBS0002,Xpressbees,delivered,2026-11-14,1,,65,0,0,0,0.8
+DLV9000274,MBS0003,Delhivery,delivered,2026-11-24,1,,65,0,35,0,0.6
+XB9000411,MBS0004,Xpressbees,delivered,2026-11-24,1,,130,0,60,0,3.2
+DLV9000548,MBS0005,Delhivery,delivered,2026-11-25,1,,95,0,35,0,2.2
+XB9000685,MBS0006,Xpressbees,delivered,2026-11-16,1,,65,0,35,0,1.3
+DLV9000822,MBS0007,Delhivery,delivered,2026-11-17,1,,95,0,0,0,1.2
+XB9000959,MBS0008,Xpressbees,delivered,2026-11-17,1,,130,0,50,0,3.8
+DLV9001096,MBS0009,Delhivery,delivered,2026-11-18,1,,95,0,35,0,2.2
+XB9001233,MBS0010,Xpressbees,delivered,2026-11-18,1,,95,0,35,0,1.6
+DLV9001370,MBS0011,Delhivery,delivered,2026-11-19,1,,65,0,35,0,0.6
+XB9001507,MBS0012,Xpressbees,delivered,2026-11-19,1,,95,0,0,0,2.1
+DLV9001644,MBS0013,Delhivery,rto_delivered,2026-11-25,3,Customer refused,130,130,0,0,4.4
+XB9001781,MBS0014,Xpressbees,rto_delivered,2026-11-25,3,Customer not available,65,65,0,0,0.8
+DLV9001918,MBS0015,Delhivery,rto_delivered,2026-11-25,3,Consignee unavailable - door locked,95,95,0,0,2.2
+XB9002055,MBS0016,Xpressbees,rto_delivered,2026-11-25,3,Customer refused,130,130,0,0,3.2
+DLV9002192,MBS0017,Delhivery,delivered,2026-11-22,1,,95,0,0,120,2.2
+XB9002329,MBS0018,Xpressbees,delivered,2026-11-23,1,,65,0,35,120,0.8
+DLV9002466,MBS0019,Delhivery,ndr,2026-11-25,2,Customer not available,95,0,0,0,1.2
+XB9002603,MBS0020,Xpressbees,ndr,2026-11-25,2,Address incomplete,95,0,0,0,1.6
+DLV9002740,MBS0021,Delhivery,ndr,2026-11-25,2,Customer not reachable,95,0,0,0,2.2
+XB9002877,MBS0022,Xpressbees,in_transit,2026-11-26,0,,95,0,0,0,2.2
+DLV9003014,MBS0023,Delhivery,in_transit,2026-11-26,0,,65,0,0,0,0.6
+XB9003151,MBS0024,Xpressbees,in_transit,2026-11-26,0,,95,0,0,0,1.6

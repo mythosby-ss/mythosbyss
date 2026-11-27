@@ -132,6 +132,21 @@ Open any page → right-click → **View page source** to check the tags.
 - [ ] Edit a banner or approve a review in admin → home page shows the change at once (cache clears on save).
 - [ ] Full checkout still works: login with OTP → place a COD order.
 
+## Phase 9 – Payment rules by cart total & weight
+
+Automatic tests (safe: temporary copy of the local database, no network): `npm run test:payments` → "28 passed, 0 failed".
+
+Setup: Admin → Settings → COD & RTO rules → "Payment rules by cart total & weight" shows 800 / 1 kg, 1000 / 2 kg / ₹199, "3:299", 3 kg. In Admin → Products, give product A a dead weight of 0.3 kg, product B 1.5 kg, product C 3.5 kg, and set product D to "Prepaid only".
+
+- [ ] Product form: type 0.4 kg and box 30 × 20 × 20 cm → "Chargeable weight: 2.4 kg (by box size)". Save → it stays.
+- [ ] Cart with 1 × A (under ₹800) → checkout shows COD, partial COD (normal advance) and pay online. No yellow note.
+- [ ] Cart total ₹800–1,000 (or 1 × B) → COD greyed out with its reason, partial COD asks ₹199 now, yellow note "… Pay online & save ₹X".
+- [ ] Cart total over ₹1,000 (or weight 2–3 kg) → partial COD asks ₹299 now. Untick "also allow partial COD" in admin → only pay online.
+- [ ] Add C (over 3 kg) → only pay online; note says "Your order weighs … Orders over 3 kg can only be paid online."
+- [ ] Cart with D only → only pay online; note names the product. D's product page has no "Cash on delivery available" line; its pincode check says online only.
+- [ ] Existing rules still win: mark a pincode "COD blocked" → even a small cart loses full COD for that pincode.
+- [ ] Untick "Use these rules" → checkout behaves exactly as before this phase.
+
 ## Moving from Shopdeck to Hostinger
 
 - [ ] **Shopdeck links:** with `.env` pointing at your live Turso DB, run `node scripts/remove-shopdeck-links.js` (read-only report). If it finds any, take a Turso backup, then run it with `--fix` (downloads those images to your server). Run the report again → "0 Shopdeck link(s) found".

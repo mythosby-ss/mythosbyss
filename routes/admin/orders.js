@@ -17,7 +17,7 @@ const TABS = {
   pending: { label: 'Non-dispatched', sql: "status IN ('confirmed','packed')" },
   shipped: { label: 'In transit', sql: "status IN ('shipped','out_for_delivery')" },
   delivered: { label: 'Delivered', sql: "status='delivered'" },
-  cancelled: { label: 'Cancelled / RTO', sql: "status IN ('cancelled','rto')" },
+  cancelled: { label: 'Cancelled / RTO / Returned', sql: "status IN ('cancelled','rto','returned')" },
   payment: { label: 'Payment pending', sql: "status='awaiting_payment'" },
   all: { label: 'All', sql: '1=1' }
 };
@@ -154,7 +154,9 @@ router.post('/:id/status', async (req, res) => {
 
 router.post('/:id/logistics', async (req, res) => {
   const b = req.body;
-  await db.run('UPDATE orders SET courier=?, awb=?, courier_charge=?, updated_at=? WHERE id=?', [String(b.courier || '').trim(), String(b.awb || '').trim(), Number(b.courier_charge) || 0, db.nowIso(), req.params.id]);
+  const opt = (v) => (v === undefined || String(v).trim() === '' ? null : Math.max(0, Number(v) || 0)); // empty = not entered (daily report says "not available")
+  await db.run('UPDATE orders SET courier=?, awb=?, courier_charge=?, rto_charge=?, courier_cod_charge=?, reverse_pickup_charge=?, updated_at=? WHERE id=?',
+    [String(b.courier || '').trim(), String(b.awb || '').trim(), Number(b.courier_charge) || 0, opt(b.rto_charge), opt(b.courier_cod_charge), opt(b.reverse_pickup_charge), db.nowIso(), req.params.id]);
   await orders.addEvent(req.params.id, null, `Logistics updated: ${b.courier || '-'} / ${b.awb || '-'}`, 'admin');
   res.flash('Logistics saved.'); res.redirect(`/admin/orders/${req.params.id}`);
 });

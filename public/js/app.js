@@ -146,21 +146,31 @@
       addBtn.disabled = false;
     });
 
-    // Frequently bought together: live total, and keep "This item" in sync with the chosen size
+    // Frequently bought together (add-ons only; this product has its own Add to cart): live total, added in the background
     const fbt = $('[data-fbt]');
     if (fbt) {
-      const boxes = $$('input[name="add"]', fbt);
+      const boxes = $$('input[name="add"]', fbt); const btn = $('[data-fbt-btn]', fbt);
       const total = () => {
         const on = boxes.filter((b) => b.checked);
         $('[data-fbt-total]', fbt).textContent = money(on.reduce((s, b) => s + Number(b.dataset.price), 0));
-        $('[data-fbt-btn]', fbt).disabled = !on.length;
+        btn.disabled = !on.length;
       };
       boxes.forEach((b) => b.addEventListener('change', total));
-      fbt.addEventListener('submit', () => track(...boxes.filter((b) => b.checked).map((b) => ({ id: b.value.split(':')[1], price: Number(b.dataset.price), qty: 1 }))));
-      $$('input[name="variant"]', prod).forEach((r) => r.addEventListener('change', () => {
-        const v = variants.find((x) => x.sku === r.value); const main = $('[data-fbt-main]', fbt);
-        if (v && main) { main.value = main.value.split(':')[0] + ':' + v.sku; main.dataset.price = v.price; total(); }
-      }));
+      fbt.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const picked = boxes.filter((b) => b.checked); if (!picked.length) return;
+        const label = btn.textContent; btn.disabled = true; btn.textContent = 'Adding...';
+        try {
+          const res = await fetch('/cart/add-many', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'x-csrf-token': csrf() },
+            body: JSON.stringify({ add: picked.map((b) => b.value) }) });
+          const data = await res.json().catch(() => ({}));
+          if (!data.ok) throw new Error(data.message || 'Could not add these items. Please refresh the page and try again.');
+          const badge = $('[data-cart-count]'); if (badge) { badge.textContent = data.count; badge.classList.remove('hidden'); }
+          toast(data.added === 1 ? '1 item added to cart' : data.added + ' items added to cart');
+          track(...picked.map((b) => ({ id: b.value.split(':')[1], price: Number(b.dataset.price), qty: 1 })));
+        } catch (err) { toast(err.message || 'Could not add these items. Please try again.'); }
+        btn.textContent = label; total();
+      });
     }
 
     // Delivery check: pincode rules from Admin > Settings > COD & RTO rules (GET /api/pincode/:pin)
@@ -170,7 +180,7 @@
       out.classList.remove('hidden');
       if (!/^[1-9]\d{5}$/.test(pin)) { out.className = 'mt-3 text-sm text-red-600'; out.textContent = 'Enter a valid 6-digit pincode.'; return; }
       out.className = 'mt-3 text-sm text-neutral-600'; out.textContent = 'Checking...';
-      fetch('/api/pincode/' + pin, { headers: { Accept: 'application/json' } }).then((r) => r.json()).then((d) => {
+      fetch('/api/pincode/' + pin + (prod.dataset.slug ? '?slug=' + encodeURIComponent(prod.dataset.slug) : ''), { headers: { Accept: 'application/json' } }).then((r) => r.json()).then((d) => {
         out.className = 'mt-3 text-sm ' + (d.ok && d.serviceable ? 'text-green-700' : 'text-red-600'); out.textContent = d.message || 'Please try again.';
       }).catch(() => { out.className = 'mt-3 text-sm text-red-600'; out.textContent = 'Could not check right now. Please try again.'; });
     });

@@ -1,5 +1,5 @@
 <%- include('partials/top') %>
-<div class="grid xl:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
   <section class="a-card overflow-x-auto xl:col-span-2"><h2 class="a-h p-5 pb-3">Coupons</h2>
     <table class="a-table min-w-[720px]"><thead><tr><th>Code</th><th>Discount</th><th>Min order</th><th>Expires</th><th>Used</th><th>Status</th><th></th></tr></thead><tbody>
     <% list.forEach((c) => { const expired = c.expires_on && c.expires_on < today; %><tr><td><b><%= c.code %></b><br><span class="text-xs text-neutral-500"><%= c.title %></span></td><td><%= c.type === 'flat' ? money(c.value) : c.value + '%' %><%= c.max_discount ? ' up to ' + money(c.max_discount) : '' %></td><td><%= money(c.min_order) %></td><td><%= c.expires_on || '-' %></td><td><%= c.used %></td><td><%- expired ? pill('Expired', 'red') : c.active ? pill('Active', 'green') : pill('Off', 'gray') %></td>

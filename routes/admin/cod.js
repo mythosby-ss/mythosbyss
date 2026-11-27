@@ -6,6 +6,7 @@ const { isValidPincode } = require('../../lib/validate');
 
 const money = (v) => String(Math.max(0, Math.round(Number(v) || 0)));
 const pick = (v, allowed, d) => (allowed.includes(v) ? v : d);
+const kg = (v) => String(Math.max(0, Math.round((Number(v) || 0) * 100) / 100));
 
 router.get('/settings/cod', async (req, res, next) => {
   try {
@@ -37,12 +38,27 @@ router.post('/settings/cod', async (req, res) => {
     pincode_mode: pick(b.pincode_mode, ['all', 'list'], 'all'),
     rto_block_threshold: String(Math.max(0, parseInt(b.rto_block_threshold, 10) || 0)),
     risk_allow_partial: b.risk_allow_partial ? '1' : '0',
+    pay_rules_enabled: b.pay_rules_enabled ? '1' : '0',
+    pay_rule_cod_below_total: money(b.pay_rule_cod_below_total),
+    pay_rule_cod_max_weight: kg(b.pay_rule_cod_max_weight),
+    pay_rule_mid_max_total: money(b.pay_rule_mid_max_total),
+    pay_rule_mid_max_weight: kg(b.pay_rule_mid_max_weight),
+    pay_rule_mid_advance: String(Math.max(1, Number(money(b.pay_rule_mid_advance)) || 199)),
+    pay_rule_high_partial: b.pay_rule_high_partial ? '1' : '0',
+    pay_rule_high_advance_table: String(b.pay_rule_high_advance_table || '').split(',').map((x) => x.split(':').map((y) => Number(String(y).trim())))
+      .filter(([w, a]) => w > 0 && a > 0).map(([w, a]) => `${w}:${Math.round(a)}`).join(', '),
+    pay_rule_prepaid_only_weight: kg(b.pay_rule_prepaid_only_weight),
+    default_weight_kg: kg(b.default_weight_kg),
     address_require_landmark: b.address_require_landmark ? '1' : '0',
     delivery_days_text: String(b.delivery_days_text || '').trim().slice(0, 60) || '4-8 working days',
     confirm_autocancel_hours: String(Math.max(0, parseInt(b.confirm_autocancel_hours, 10) || 0)),
     confirm_message: String(b.confirm_message || '').replace(/\r/g, '').trim().slice(0, 1000) || settings.get('confirm_message')
   };
   for (const [k, v] of Object.entries(vals)) await settings.set(k, v);
+  const warn = [];
+  if (Number(vals.pay_rule_cod_below_total) > Number(vals.pay_rule_mid_max_total)) warn.push('the full-COD total is higher than the partial-COD total');
+  if (Number(vals.pay_rule_cod_max_weight) > Number(vals.pay_rule_mid_max_weight) || (Number(vals.pay_rule_prepaid_only_weight) && Number(vals.pay_rule_mid_max_weight) > Number(vals.pay_rule_prepaid_only_weight))) warn.push('the weights should go up: full COD ≤ partial COD ≤ prepaid-only');
+  if (warn.length) res.flash(`Saved, but check the cart rules: ${warn.join('; ')}.`, 'err'); else
   if (Number(vals.cod_max_order) && Number(vals.cod_min_order) > Number(vals.cod_max_order)) res.flash('Saved, but the COD minimum is higher than the maximum, so full COD will never be offered.', 'err');
   else res.flash('COD & RTO rules saved. They apply to new checkouts immediately.');
   res.redirect('/admin/settings/cod');
